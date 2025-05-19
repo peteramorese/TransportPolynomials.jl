@@ -1,8 +1,3 @@
-using Random
-using Distributions
-using LinearAlgebra
-using MultivariatePolynomials
-using DynamicPolynomials
 
 # Generate synthetic data
 function generate_data(f, d, n; domain_std=1.0, noise_std=0.1, seed=0)

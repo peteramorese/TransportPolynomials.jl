@@ -1,10 +1,3 @@
-module DataStructures
-
-using DynamicPolynomials
-using MultivariatePolynomials
-
-export SystemModel, SpatioTemporalPoly
-
 struct SystemModel
     x_vars::Vector{<:MultivariatePolynomials.AbstractVariable}
     f::Vector{<:MultivariatePolynomials.AbstractPolynomialLike}
@@ -27,5 +20,3 @@ function (stp::SpatioTemporalPoly)(x::Vector{Float64}, t::Float64)
     merge!(subst, Dict(stp.t_var => t))
     return convert(Float64, subs(stp.p_antideriv, subst...))
 end
-
-end # module

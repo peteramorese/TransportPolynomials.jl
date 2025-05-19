@@ -1,17 +1,4 @@
-using DynamicPolynomials
-using MultivariatePolynomials
-using LazySets
-using IterTools
-using Distributions
-using LinearAlgebra
 
-include("Visualizaton.jl")
-include("DataStructures.jl")
-
-using .DataStructures
-using .Visualization
-
-begin
 function divergence(x::Vector{<:MultivariatePolynomials.AbstractVariable}, p::Vector{<:MultivariatePolynomials.AbstractPolynomialLike})
     divergence_poly = 0
     for i in 1:length(x)
@@ -29,7 +16,7 @@ function compute_coefficients(model::SystemModel, degree::Int=1)
     Φ_i = 1
     coefficients = []
     for i in 1:degree
-        Φ_ip1 = reynolds_operator(x, Φ_i, model)
+        Φ_ip1 = reynolds_operator(model.x_vars, Φ_i, model.f)
         Φ_i = Φ_ip1
         push!(coefficients, Φ_i)
     end
@@ -38,14 +25,15 @@ end
 
 function create_vol_poly(
         model::SystemModel, 
-        t::Variable,
+        t::Variable;
         degree::Int=1)
 
     coefficients = compute_coefficients(model, degree)
 
     t_monoms = monomials(t, 1:degree)
+    taylor_scales = [1/factorial(i) for i in 1:degree]
 
-    return t_monoms' * coefficients
+    return (taylor_scales .* t_monoms)' * coefficients
 end
 
 function create_integrator_polynomial(vol_poly::SpatioTemporalPoly)
@@ -74,9 +62,7 @@ function evaluate_integral(antideriv, region::Hyperrectangle{Float64})
 end
 
 function density(x_eval::Vector{Float64}, t_eval::Float64, vol_poly::SpatioTemporalPoly)
-    subst = Dict(vol_poly.x_vars[i] => x_eval[i] for i in 1:length(vol_poly.x_vars))
-    merge!(subst, Dict(vol_poly.t_var => t_eval))
-    return subs(vol_poly.p, subst...)
+    return vol_poly(x_eval, t_eval)
 end
 
 function euler_density(x_eval::Vector{Float64}, t_eval::Float64, model::SystemModel, n_timesteps::Int=100)
@@ -89,27 +75,6 @@ function euler_density(x_eval::Vector{Float64}, t_eval::Float64, model::SystemMo
     end 
     return exp(log_density)
 end
-end
 
 function probability(region::Hyperrectangle{Float64}, integ_polynomial::SpatioTemporalPoly)
 end
-@polyvar x[1:2]
-@polyvar t
-
-f1 = (x[1] * (x[1] - 1)) * (-x[1]^2 + 3.0 * x[1]*x[2]^2)
-f2 = (x[2] * (x[2] - 1)) * (x[1] - 4 * x[2]^2 * x[1])
-#f1 = (x[1]^2 + x[1]*x[2]^2)
-#f2 = (x[1] + 2 * x[2] * x[1])
-
-model = Visualization.DataStructures.SystemModel(x, [f1, f2])
-
-println("f1: ", f1)
-println("f2: ", f2)
-
-#density = euler_density([.5, .5], 1.0, model)
-#println("Euler density: ", density)
-
-p_vf = plot_2D_erf_space_vf(model, n_points=20)
-p_erf = plot_2D_erf_space_pdf(model, 1.0, n_points=30, n_timesteps=50)
-p_ss = plot_2D_pdf(model, 1.0, (-3.0, 3.0), (-3.0, 3.0), n_points=30, n_timesteps=50)
-plot(p_vf, p_erf, p_ss, layout=(1,3))

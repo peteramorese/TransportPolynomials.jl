@@ -1,16 +1,3 @@
-module Visualization
-
-using Plots
-
-include("DataStructures.jl")
-
-#if !@isdefined(DataStructures)
-#    include("DataStructures.jl")
-#end
-using .DataStructures
-
-export plot_data, plot_polynomial_surface, plot_2D_pdf, plot_2D_erf_space_pdf, plot_2D_erf_space_vf
-
 function plot_data(X, Y, title="")
     @assert size(X, 2) == 2
     p1 = scatter(X[:, 1], X[:, 2], Y[:, 1], markersize=4, title="f1(x1, x2)", xlabel="x1", ylabel="x2", zlabel="f1")
@@ -50,7 +37,7 @@ function plot_2D_erf_space_pdf(model::SystemModel, t_eval::Float64; n_points::In
     function euler_pdf(x_eval::Vector{Float64})
         return euler_density(x_eval, t_eval, model, n_timesteps)
     end
-    return plot_2D_pdf(euler_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space pdf")
+    return plot_2D_pdf(euler_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Euler pdf")
 end
 
 function plot_2D_pdf(model::SystemModel, t_eval::Float64, xlim, ylim; n_points::Int=100, n_timesteps::Int=100)
@@ -60,7 +47,24 @@ function plot_2D_pdf(model::SystemModel, t_eval::Float64, xlim, ylim; n_points::
         volume_change = prod(pdf.(d, x_eval))
         return volume_change * euler_density(u_eval, t_eval, model, n_timesteps)
     end
-    return plot_2D_pdf(euler_pdf, xlim, ylim, n_points=n_points, title="State space PDF")
+    return plot_2D_pdf(euler_pdf, xlim, ylim, n_points=n_points, title="State space Euler PDF")
+end
+
+function plot_2D_erf_space_pdf(vol_poly::SpatioTemporalPoly, t_eval::Float64; n_points::Int=100)
+    function vol_poly_pdf(x_eval::Vector{Float64})
+        return density(x_eval, t_eval, vol_poly)
+    end
+    return plot_2D_pdf(vol_poly_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Vol-Poly pdf")
+end
+
+function plot_2D_pdf(vol_poly::SpatioTemporalPoly, t_eval::Float64, xlim, ylim; n_points::Int=100)
+    d = Normal()
+    function vol_poly_pdf(x_eval::Vector{Float64})
+        u_eval = cdf.(d, x_eval)
+        volume_change = prod(pdf.(d, x_eval))
+        return volume_change * density(x_eval, t_eval, vol_poly)
+    end
+    return plot_2D_pdf(vol_poly_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Vol-Poly pdf")
 end
 
 function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Float64=0.1)
@@ -78,5 +82,3 @@ function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Floa
                    xlabel="x_1", ylabel="x_2", 
                    title="System Vector Field")
 end
-
-end # module
