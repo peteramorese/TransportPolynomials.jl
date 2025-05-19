@@ -1,0 +1,4 @@
+name = "TransportPolynomials"
+uuid = "69b6ae23-bf73-4db6-99ee-ef78af08ccd7"
+authors = ["Peter Amorese <peter.amorese@gmail.com>"]
+version = "0.1.0"
