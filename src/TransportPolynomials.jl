@@ -20,7 +20,7 @@ export plot_data, plot_polynomial_surface, plot_2D_pdf,
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_integrator_polynomial,
-    evaluate_integral, density, euler_density, probability
+    evaluate_integral, density, euler_density, probability, mc_euler_probability, plot_2D_region
 
 
 include("DataStructures.jl")

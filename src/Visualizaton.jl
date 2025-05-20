@@ -52,6 +52,7 @@ end
 
 function plot_2D_erf_space_pdf(vol_poly::SpatioTemporalPoly, t_eval::Float64; n_points::Int=100)
     function vol_poly_pdf(x_eval::Vector{Float64})
+        #println("density: ", density(x_eval, t_eval, vol_poly), " at x_eval: ", x_eval, " t_eval: ", t_eval)
         return density(x_eval, t_eval, vol_poly)
     end
     return plot_2D_pdf(vol_poly_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Vol-Poly pdf")
@@ -62,9 +63,11 @@ function plot_2D_pdf(vol_poly::SpatioTemporalPoly, t_eval::Float64, xlim, ylim; 
     function vol_poly_pdf(x_eval::Vector{Float64})
         u_eval = cdf.(d, x_eval)
         volume_change = prod(pdf.(d, x_eval))
-        return volume_change * density(x_eval, t_eval, vol_poly)
+        #println("density: ", density(u_eval, t_eval, vol_poly), " at x_eval: ", x_eval, " t_eval: ", t_eval)
+        #println("volume change: ", volume_change, " density: ", density(x_eval, t_eval, vol_poly))
+        return volume_change * density(u_eval, t_eval, vol_poly)
     end
-    return plot_2D_pdf(vol_poly_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Vol-Poly pdf")
+    return plot_2D_pdf(vol_poly_pdf, xlim, ylim, n_points=n_points, title="State space Vol-Poly pdf")
 end
 
 function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Float64=0.1)
@@ -81,4 +84,83 @@ function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Floa
     return Plots.quiver(X, Y, quiver=(scale * f1_values, scale * f2_values); 
                    xlabel="x_1", ylabel="x_2", 
                    title="System Vector Field")
+end
+
+function plot_2D_region(plt, region::Hyperrectangle{Float64}; color="red", alpha=0.5)
+    center = region.center
+    radius = region.radius
+    xlims = (center[1] - radius[1], center[1] + radius[1])
+    ylims = (center[2] - radius[2], center[2] + radius[2])
+    
+    # For a 2D region in a 3D plot, we need to get the current z-limits
+    current_zlims = try
+        Plots.zlims(plt)
+    catch
+        (0.0, 1.0)  # Default if zlims cannot be retrieved
+    end
+    zmin, zmax = current_zlims
+    
+    # If zlims are not set (often returns (0,0)), use a default small value
+    if zmin == zmax
+        zmin = 0.0
+        zmax = 1.0
+    end
+    
+    # Instead of trying to plot complex 3D objects, let's use shape primitives
+    # Plot the bottom face (at zmin)
+    x_points = [xlims[1], xlims[2], xlims[2], xlims[1], xlims[1]]
+    y_points = [ylims[1], ylims[1], ylims[2], ylims[2], ylims[1]]
+    z_points = fill(zmin, 5)
+    
+    # Add the bottom face
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    # Add the top face (at zmax)
+    z_points = fill(zmax, 5)
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    # Add side walls (front side)
+    x_points = [xlims[1], xlims[2], xlims[2], xlims[1]]
+    y_points = [ylims[1], ylims[1], ylims[1], ylims[1]]
+    z_points = [zmin, zmin, zmax, zmax]
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    # Add side walls (back side)
+    y_points = [ylims[2], ylims[2], ylims[2], ylims[2]]
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    # Add side walls (left side)
+    x_points = [xlims[1], xlims[1], xlims[1], xlims[1]]
+    y_points = [ylims[1], ylims[2], ylims[2], ylims[1]]
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    # Add side walls (right side)
+    x_points = [xlims[2], xlims[2], xlims[2], xlims[2]]
+    plot!(plt, x_points, y_points, z_points, 
+          seriestype=:surface, 
+          color=color, 
+          alpha=alpha,
+          linewidth=0)
+    
+    return plt
 end

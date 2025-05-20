@@ -25,12 +25,21 @@ println("f2: ", f2)
 
 time = 1.0
 
+erf_space_region = Hyperrectangle(low=[.2, .6], high=[.4, .9])
+
 p_vf = plot_2D_erf_space_vf(model, n_points=20)
 p_erf = plot_2D_erf_space_pdf(model, time, n_points=30, n_timesteps=50)
 p_ss = plot_2D_pdf(model, time, (-3.0, 3.0), (-3.0, 3.0), n_points=30, n_timesteps=50)
-plot(p_vf, p_erf, p_ss, layout=(1,3))
+plot_2D_region(p_erf, erf_space_region, color="red", alpha=0.5)
+fig1 = plot(p_vf, p_erf, p_ss, layout=(1,3))
 
-vol_poly = create_vol_poly(model, t, degree=2)
+vol_poly = create_vol_poly(model, t, degree=8)
 p_vp_erf = plot_2D_erf_space_pdf(vol_poly, time, n_points=30)
-p_pv_ss = plot_2D_pdf(vol_poly, time, n_points=30)
-plot(p_vp_erf, p_pv_ss, layout=(1,2))
+p_pv_ss = plot_2D_pdf(vol_poly, time, (-3.0, 3.0), (-3.0, 3.0), n_points=30)
+fig2 = plot(p_vp_erf, p_pv_ss, layout=(1,2))
+
+display(fig1)
+display(fig2)
+
+mc_prob = mc_euler_probability(erf_space_region, model, time)
+println("Monte Carlo probability: ", mc_prob)
