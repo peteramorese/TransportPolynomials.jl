@@ -91,14 +91,17 @@ function euler_density(x_eval::Vector{Float64}, t_eval::Float64, model::SystemMo
     return exp(log_density)
 end
 
-function probability(region::Hyperrectangle{Float64}, integ_polynomial::SpatioTemporalPoly)
+function probability(region::Hyperrectangle{Float64}, t_eval::Float64, integ_polynomial::SpatioTemporalPoly)
+    function antideriv(x::Vector{Float64})
+        return integ_polynomial(x, t_eval)   
+    end
+    return evaluate_integral(antideriv, region)
 end
 
 function mc_euler_probability(region::Hyperrectangle{Float64}, model::SystemModel, t_eval::Float64, n_timesteps::Int=100, n_samples::Int=1000)
-    mvn = MvNormal(zeros(length(model.x_vars)), I)
     count = 0
     for _ in 1:n_samples
-        x_eval_0 = rand(mvn)
+        x_eval_0 = rand(Uniform(0, 1), length(model.x_vars))
         x_eval_t = propagate_sample(x_eval_0, t_eval, model, n_timesteps, forward=true)
         if x_eval_t ∈ region
             count += 1

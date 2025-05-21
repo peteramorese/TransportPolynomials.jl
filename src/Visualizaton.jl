@@ -47,7 +47,7 @@ function plot_2D_pdf(model::SystemModel, t_eval::Float64, xlim, ylim; n_points::
         volume_change = prod(pdf.(d, x_eval))
         return volume_change * euler_density(u_eval, t_eval, model, n_timesteps)
     end
-    return plot_2D_pdf(euler_pdf, xlim, ylim, n_points=n_points, title="State space Euler PDF")
+    return plot_2D_pdf(euler_pdf, xlim, ylim, n_points=n_points, title="State space Euler pdf")
 end
 
 function plot_2D_erf_space_pdf(vol_poly::SpatioTemporalPoly, t_eval::Float64; n_points::Int=100)
@@ -86,81 +86,124 @@ function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Floa
                    title="System Vector Field")
 end
 
-function plot_2D_region(plt, region::Hyperrectangle{Float64}; color="red", alpha=0.5)
-    center = region.center
-    radius = region.radius
-    xlims = (center[1] - radius[1], center[1] + radius[1])
-    ylims = (center[2] - radius[2], center[2] + radius[2])
-    
-    # For a 2D region in a 3D plot, we need to get the current z-limits
-    current_zlims = try
-        Plots.zlims(plt)
-    catch
-        (0.0, 1.0)  # Default if zlims cannot be retrieved
+function plot_2D_region(plt, region::Hyperrectangle{Float64}; alpha=0.5)
+    # Get base rectangle center and radius
+    c = region.center
+    r = region.radius
+    if length(c) != 2 || length(r) != 2
+        error("Expected a 2D Hyperrectangle")
     end
-    zmin, zmax = current_zlims
-    
-    # If zlims are not set (often returns (0,0)), use a default small value
-    if zmin == zmax
-        zmin = 0.0
-        zmax = 1.0
-    end
-    
-    # Instead of trying to plot complex 3D objects, let's use shape primitives
-    # Plot the bottom face (at zmin)
-    x_points = [xlims[1], xlims[2], xlims[2], xlims[1], xlims[1]]
-    y_points = [ylims[1], ylims[1], ylims[2], ylims[2], ylims[1]]
-    z_points = fill(zmin, 5)
-    
-    # Add the bottom face
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
-    # Add the top face (at zmax)
-    z_points = fill(zmax, 5)
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
-    # Add side walls (front side)
-    x_points = [xlims[1], xlims[2], xlims[2], xlims[1]]
-    y_points = [ylims[1], ylims[1], ylims[1], ylims[1]]
-    z_points = [zmin, zmin, zmax, zmax]
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
-    # Add side walls (back side)
-    y_points = [ylims[2], ylims[2], ylims[2], ylims[2]]
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
-    # Add side walls (left side)
-    x_points = [xlims[1], xlims[1], xlims[1], xlims[1]]
-    y_points = [ylims[1], ylims[2], ylims[2], ylims[1]]
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
-    # Add side walls (right side)
-    x_points = [xlims[2], xlims[2], xlims[2], xlims[2]]
-    plot!(plt, x_points, y_points, z_points, 
-          seriestype=:surface, 
-          color=color, 
-          alpha=alpha,
-          linewidth=0)
-    
+
+    # Compute base rectangle corners
+    x0, y0 = c[1] - r[1], c[2] - r[2]
+    x1, y1 = c[1] + r[1], c[2] + r[2]
+
+    # z-limits from the plot
+    z0, z1 = Plots.zlims(plt)
+
+    # Define 8 corner points of the 3D box
+    xp = [x0, x1, x0, x1, x0, x1, x0, x1]
+    yp = [y0, y0, y1, y1, y0, y0, y1, y1]
+    zp = [z0, z0, z0, z0, z1, z1, z1, z1]
+
+    # Triangular faces: (1-based indices)
+    connections = [
+        (1,2,3), (4,2,3),       # bottom
+        (5,6,7), (8,6,7),       # top
+        (1,2,6), (1,5,6),       # front
+        (2,4,8), (2,6,8),       # right
+        (4,3,7), (4,8,7),       # back
+        (3,1,5), (3,7,5)        # left
+    ]
+
+    # Plot the box using mesh3d!
+    mesh3d!(plt, xp, yp, zp;
+        connections,
+        opacity=alpha,
+        linecolor=:black,
+        color=:lightblue,
+        legend=false,
+        linewidth=0,
+    )
+
     return plt
 end
+
+#function plot_2D_region(plt, region::Hyperrectangle{Float64}; color="red", alpha=0.5)
+#    center = region.center
+#    radius = region.radius
+#    xlims = (center[1] - radius[1], center[1] + radius[1])
+#    ylims = (center[2] - radius[2], center[2] + radius[2])
+#    
+#    # For a 2D region in a 3D plot, we need to get the current z-limits
+#    current_zlims = try
+#        Plots.zlims(plt)
+#    catch
+#        (0.0, 1.0)  # Default if zlims cannot be retrieved
+#    end
+#    zmin, zmax = current_zlims
+#    
+#    # If zlims are not set (often returns (0,0)), use a default small value
+#    if zmin == zmax
+#        zmin = 0.0
+#        zmax = 1.0
+#    end
+#    
+#    # Instead of trying to plot complex 3D objects, let's use shape primitives
+#    # Plot the bottom face (at zmin)
+#    x_points = [xlims[1], xlims[2], xlims[2], xlims[1], xlims[1]]
+#    y_points = [ylims[1], ylims[1], ylims[2], ylims[2], ylims[1]]
+#    z_points = fill(zmin, 5)
+#    
+#    # Add the bottom face
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    # Add the top face (at zmax)
+#    z_points = fill(zmax, 5)
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    # Add side walls (front side)
+#    x_points = [xlims[1], xlims[2], xlims[2], xlims[1]]
+#    y_points = [ylims[1], ylims[1], ylims[1], ylims[1]]
+#    z_points = [zmin, zmin, zmax, zmax]
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    # Add side walls (back side)
+#    y_points = [ylims[2], ylims[2], ylims[2], ylims[2]]
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    # Add side walls (left side)
+#    x_points = [xlims[1], xlims[1], xlims[1], xlims[1]]
+#    y_points = [ylims[1], ylims[2], ylims[2], ylims[1]]
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    # Add side walls (right side)
+#    x_points = [xlims[2], xlims[2], xlims[2], xlims[2]]
+#    plot!(plt, x_points, y_points, z_points, 
+#          seriestype=:surface, 
+#          seriescolor=color, 
+#          fillalpha=alpha,
+#          linewidth=0)
+#    
+#    return plt
+#end

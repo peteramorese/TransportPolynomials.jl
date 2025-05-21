@@ -11,12 +11,12 @@ end
 struct SpatioTemporalPoly
     x_vars::Vector{<:MultivariatePolynomials.AbstractVariable}
     t_var::Variable
-    p_antideriv::AbstractPolynomialLike
+    p::AbstractPolynomialLike
 end
 
 # Evaluate the spatio-temporal polynomial at the givem point and time
 function (stp::SpatioTemporalPoly)(x::Vector{Float64}, t::Float64)
     subst = Dict(stp.x_vars[i] => x[i] for i in 1:length(stp.x_vars))
     merge!(subst, Dict(stp.t_var => t))
-    return convert(Float64, subs(stp.p_antideriv, subst...))
+    return convert(Float64, subs(stp.p, subst...))
 end
