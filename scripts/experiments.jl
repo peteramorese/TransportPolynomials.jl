@@ -34,7 +34,7 @@ p_ss = plot_2D_pdf(model, time, (-3.0, 3.0), (-3.0, 3.0), n_points=30, n_timeste
 plot_2D_region(p_erf, erf_space_region, alpha=0.5)
 fig1 = plot(p_vf, p_erf, p_ss, layout=(1,3))
 
-vol_poly = create_vol_poly(model, t, degree=10)
+vol_poly = create_vol_poly(model, t, degree=3)
 p_vp_erf = plot_2D_erf_space_pdf(vol_poly, time, n_points=30)
 p_pv_ss = plot_2D_pdf(vol_poly, time, (-3.0, 3.0), (-3.0, 3.0), n_points=30)
 fig2 = plot(p_vp_erf, p_pv_ss, layout=(1,2))
@@ -45,6 +45,6 @@ display(fig2)
 mc_prob = mc_euler_probability(erf_space_region, model, time)
 println("Monte Carlo probability: ", mc_prob)
 
-integ_poly = create_integrator_polynomial(vol_poly)
+integ_poly = create_integrator_poly(vol_poly)
 vol_poly_prob = probability(erf_space_region, time, integ_poly)
 println("Volume polynomial probability: ", vol_poly_prob)

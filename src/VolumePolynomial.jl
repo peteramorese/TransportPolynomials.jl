@@ -1,4 +1,3 @@
-
 function divergence(x::Vector{<:MultivariatePolynomials.AbstractVariable}, p::Vector{<:MultivariatePolynomials.AbstractPolynomialLike})
     divergence_poly = 0
     for i in 1:length(x)
@@ -37,7 +36,7 @@ function create_vol_poly(
     return SpatioTemporalPoly(model.x_vars, t, vol_poly)
 end
 
-function create_integrator_polynomial(vol_poly::SpatioTemporalPoly)
+function create_integrator_poly(vol_poly::SpatioTemporalPoly)
     # Create the antiderivative polynomial
     p_antideriv = vol_poly.p
     for x_var in vol_poly.x_vars
@@ -46,6 +45,9 @@ function create_integrator_polynomial(vol_poly::SpatioTemporalPoly)
 
     return SpatioTemporalPoly(vol_poly.x_vars, vol_poly.t_var, p_antideriv)
 end
+
+#function bound_vol_poly(vol_poly::SpatioTemporalPoly)
+#end
 
 function evaluate_integral(antideriv, region::Hyperrectangle{Float64})
     center = region.center
