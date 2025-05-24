@@ -36,6 +36,81 @@ function create_vol_poly(
     return SpatioTemporalPoly(model.x_vars, t, vol_poly)
 end
 
+function create_vol_and_sos_bound_poly(
+        model::SystemModel, 
+        t::Variable,
+        bounding_region::Hyperrectangle{Float64};
+        degree::Int=1,
+        lagrangian_degree_inc::Int=1)
+
+    deriv_coeffs = compute_coefficients(model, degree + 1)
+
+    t_monoms = monomials(t, 1:degree)
+    taylor_scales = [1/factorial(i) for i in 1:degree]
+
+    vol_poly = (t_monoms .* taylor_scales)' * deriv_coeffs[1:end-1] + 1
+
+    kp1_deriv = deriv_coeffs[end]
+
+    ## DEBUG
+    #test = plot_polynomial_surface(kp1_deriv, model.x_vars[1], model.x_vars[2], (0,1), (0,1))
+    #display(test)
+    ##f = plot(test)
+    ##display(f)
+    ##
+
+    kp1_deriv_deg = maxdegree(kp1_deriv)
+    lagrangian_degree = kp1_deriv_deg + lagrangian_degree_inc
+    #lagrangian_degree = 12
+    @info "Degree of bound polynomial coeff: $kp1_deriv_deg, using lagrangian degree: $lagrangian_degree"
+
+    pre_scale = 1.0
+    l = sos_bound(kp1_deriv, model.x_vars, bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
+    println("M lower bound: ", l)
+    u = sos_bound(kp1_deriv, model.x_vars, bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
+    println("M upper bound: ", u)
+
+    kp1_deriv_bound = max(abs(l), abs(u))
+    bound_poly = kp1_deriv_bound * t^(degree + 1) / factorial(degree + 1)
+
+    return SpatioTemporalPoly(model.x_vars, t, vol_poly), TemporalPoly(t, bound_poly)
+end
+
+function create_vol_and_sos_bound_poly(
+        model::SystemModel, 
+        t::Variable;
+        degree::Int=1,
+        lagrangian_degree_inc::Int=2)
+    dim = dimension(model)
+    bounding_region = Hyperrectangle(low=zeros(dim), high=ones(dim))
+    return create_vol_and_sos_bound_poly(model, t, bounding_region, degree=degree, lagrangian_degree_inc=lagrangian_degree_inc)
+end
+
+function create_vol_and_coeff_bound_poly(
+        model::SystemModel, 
+        t::Variable;
+        degree::Int=1)
+
+    deriv_coeffs = compute_coefficients(model, degree + 1)
+
+    t_monoms = monomials(t, 1:degree)
+    taylor_scales = [1/factorial(i) for i in 1:degree]
+
+    vol_poly = (t_monoms .* taylor_scales)' * deriv_coeffs[1:end-1] + 1
+
+    kp1_deriv = deriv_coeffs[end]
+
+    kp1_deriv_bound = 0
+    for c in coefficients(kp1_deriv)
+        kp1_deriv_bound = max(kp1_deriv_bound, abs(c))
+    end
+    println("M coeff bound: ", kp1_deriv_bound)
+
+    bound_poly = kp1_deriv_bound * t^(degree + 1) / factorial(degree + 1)
+
+    return SpatioTemporalPoly(model.x_vars, t, vol_poly), TemporalPoly(t, bound_poly)
+end
+
 function create_integrator_poly(vol_poly::SpatioTemporalPoly)
     # Create the antiderivative polynomial
     p_antideriv = vol_poly.p
@@ -46,7 +121,7 @@ function create_integrator_poly(vol_poly::SpatioTemporalPoly)
     return SpatioTemporalPoly(vol_poly.x_vars, vol_poly.t_var, p_antideriv)
 end
 
-#function bound_vol_poly(vol_poly::SpatioTemporalPoly)
+#function vol_poly_bound(vol_poly::SpatioTemporalPoly)
 #end
 
 function evaluate_integral(antideriv, region::Hyperrectangle{Float64})

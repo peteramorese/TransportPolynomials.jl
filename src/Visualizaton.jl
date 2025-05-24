@@ -7,29 +7,28 @@ end
 
 function plot_polynomial_surface(p, x, y, xlim, ylim; n_points=50, kwargs...)
     # Create grid points
-    xvals = range(xlim[1], xlim[2], length=n_points)
-    yvals = range(ylim[1], ylim[2], length=n_points)
+    xpts = range(xlim[1], xlim[2], length=n_points)
+    ypts = range(ylim[1], ylim[2], length=n_points)
     
     # Store z values in matrix
-    z_values = [p(x => x_val, y => y_val) for y_val in yvals, x_val in xvals]
+    z_values = [p(x => x_val, y => y_val) for y_val in ypts, x_val in xpts]
     
     # Create the surface plot
-    return Plots.surface(xvals, yvals, z_values; 
+    return Plots.surface(xpts, ypts, z_values; 
                    xlabel="$(x)", ylabel="$(y)", zlabel="p($(x),$(y))",
-                   title="Polynomial Surface: $p",
                    kwargs...)
 end
 
 function plot_2D_pdf(pdf::Function, xlim, ylim; n_points::Int=100, kwargs...)
     # Create grid points
-    xvals = range(xlim[1], xlim[2], length=n_points)
-    yvals = range(ylim[1], ylim[2], length=n_points)
+    xpts = range(xlim[1], xlim[2], length=n_points)
+    ypts = range(ylim[1], ylim[2], length=n_points)
     
     # Store z values in matrix
-    z_values = [pdf([x_val, y_val]) for y_val in yvals, x_val in xvals]
+    z_values = [pdf([x_val, y_val]) for y_val in ypts, x_val in xpts]
     
     # Create the surface plot
-    return Plots.surface(xvals, yvals, z_values; 
+    return Plots.surface(xpts, ypts, z_values; 
                    xlabel="x₁ ", ylabel="x₂", zlabel="p(x₁, x₂)", kwargs...)
 end
 
@@ -72,9 +71,9 @@ end
 
 function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Float64=0.1)
     # Create grid points
-    xvals = range(0, 1, length=n_points)
-    yvals = range(0, 1, length=n_points)
-    X, Y = repeat(xvals, outer=length(yvals)), repeat(yvals, inner=length(xvals))
+    xpts = range(0, 1, length=n_points)
+    ypts = range(0, 1, length=n_points)
+    X, Y = repeat(xpts, outer=length(ypts)), repeat(ypts, inner=length(xpts))
     #print("X: ", X)
     inputs = @. (X, Y)
     
@@ -129,81 +128,44 @@ function plot_2D_region(plt, region::Hyperrectangle{Float64}; alpha=0.5)
     return plt
 end
 
-#function plot_2D_region(plt, region::Hyperrectangle{Float64}; color="red", alpha=0.5)
-#    center = region.center
-#    radius = region.radius
-#    xlims = (center[1] - radius[1], center[1] + radius[1])
-#    ylims = (center[2] - radius[2], center[2] + radius[2])
-#    
-#    # For a 2D region in a 3D plot, we need to get the current z-limits
-#    current_zlims = try
-#        Plots.zlims(plt)
-#    catch
-#        (0.0, 1.0)  # Default if zlims cannot be retrieved
-#    end
-#    zmin, zmax = current_zlims
-#    
-#    # If zlims are not set (often returns (0,0)), use a default small value
-#    if zmin == zmax
-#        zmin = 0.0
-#        zmax = 1.0
-#    end
-#    
-#    # Instead of trying to plot complex 3D objects, let's use shape primitives
-#    # Plot the bottom face (at zmin)
-#    x_points = [xlims[1], xlims[2], xlims[2], xlims[1], xlims[1]]
-#    y_points = [ylims[1], ylims[1], ylims[2], ylims[2], ylims[1]]
-#    z_points = fill(zmin, 5)
-#    
-#    # Add the bottom face
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    # Add the top face (at zmax)
-#    z_points = fill(zmax, 5)
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    # Add side walls (front side)
-#    x_points = [xlims[1], xlims[2], xlims[2], xlims[1]]
-#    y_points = [ylims[1], ylims[1], ylims[1], ylims[1]]
-#    z_points = [zmin, zmin, zmax, zmax]
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    # Add side walls (back side)
-#    y_points = [ylims[2], ylims[2], ylims[2], ylims[2]]
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    # Add side walls (left side)
-#    x_points = [xlims[1], xlims[1], xlims[1], xlims[1]]
-#    y_points = [ylims[1], ylims[2], ylims[2], ylims[1]]
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    # Add side walls (right side)
-#    x_points = [xlims[2], xlims[2], xlims[2], xlims[2]]
-#    plot!(plt, x_points, y_points, z_points, 
-#          seriestype=:surface, 
-#          seriescolor=color, 
-#          fillalpha=alpha,
-#          linewidth=0)
-#    
-#    return plt
-#end
+function plot_vol_poly_density_vs_time(x_eval::Vector{Float64}, vol_poly::SpatioTemporalPoly, duration::Float64; n_points::Int=100, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, density(x_eval, t, vol_poly))
+    end
+    return plot(tpts, volpts, label="Vol Poly Density", xlabel="t", ylabel="p(x)", kwargs...)
+end
+
+function plot_vol_poly_density_vs_time(x_eval::Vector{Float64}, vol_poly::SpatioTemporalPoly, bound_poly::TemporalPoly, duration::Float64; n_points::Int=100, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    errorpts = []
+    for t in tpts
+        append!(volpts, density(x_eval, t, vol_poly))
+        append!(errorpts, bound_poly(t))
+    end
+    plt = plot(tpts, volpts, label="Vol Poly Density", xlabel="t", ylabel="p(x)", kwargs...)
+    plot!(plt, tpts, volpts + errorpts, color=:black, linestyle=:dash)
+    plot!(plt, tpts, volpts - errorpts, color=:black, linestyle=:dash)
+    ylims!(plt, (0, maximum(volpts + errorpts)))
+    return plt
+end
+
+function plot_mc_euler_density_vs_time(x_eval::Vector{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, mc_euler_density(x_eval, t, model))
+    end
+    return plot(tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="p(x)", kwargs...)
+end
+
+function plot_euler_density_vs_time(plt::Plots.Plot, x_eval::Vector{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, euler_density(x_eval, t, model))
+    end
+    return plot(plt, tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="p(x)", kwargs...)
+end

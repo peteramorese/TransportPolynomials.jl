@@ -7,9 +7,15 @@ using MultivariatePolynomials
 using Plots
 using LazySets
 
-@polyvar x
+@polyvar x[1:2]
 
-p = 1.8*x^3 - 2*x^2 + 1 + 2*x^4 - .1*x^5 - 1.7*x^6
+p = 8*x[1]^2 * x[2] - 7 * x[1]^3 * x[2] ^2
 
-bound = sos_bound(p, [x], 4, upper_bound=false)
+region = Hyperrectangle(low=[0.0, 0.0], high=[1.0, 1.0])
+bound = sos_bound(p, x, region, 4, upper_bound=true, pre_scale=.1)
 println("Bound: ", bound)
+
+@polyvar y[1:2]
+
+a = y[1]^2 * y[2]^3
+print(coefficient(a, y[1]^2 * y[2]^3))
