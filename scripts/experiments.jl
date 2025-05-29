@@ -26,15 +26,22 @@ println("f2: ", f2)
 
 time = 1.0
 
+order = 3
+
 erf_space_region = Hyperrectangle(low=[0.4, .6], high=[0.6, 1.0])
 
-vol_poly = create_vol_poly(model, t, degree=5)
-#vol_poly, bound_poly = create_vol_and_sos_bound_poly(model, t, degree=4, lagrangian_degree_inc=0)
-#vol_poly, bound_poly = create_vol_and_coeff_bound_poly(model, t, degree=3)
+vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, t, order)
 
-#integ_poly = create_integrator_poly(vol_poly)
+println("Created volume polynomial")
 
-println("done")
+bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=1)
+
+println("Created bound polynomial")
+
+integ_poly = create_integrator_poly(vol_poly)
+
+println("Created integrator polynomial")
+
 
 
 ## Plot the pdf at a given time
@@ -53,19 +60,28 @@ fig2 = plot(plt_vp_erf, plt_pv_ss, layout=(1,2))
 
 ## Plot the density prediction over time
 u = [0.5, 0.2]
-duration = 10.0
+duration = 5.0
 #plt_vp_density = plot_vol_poly_density_vs_time(u, vol_poly, bound_poly, duration, n_points=100)
 plt_vp_density = plot_vol_poly_density_vs_time(u, vol_poly, duration, n_points=100)
 plt_vp_density = plot_euler_density_vs_time(plt_vp_density, u, model, duration, n_points=100)
 fig3 = plot(plt_vp_density, title="Density vs. time for u=$u")
 
-# Compare integration methods
-mc_prob = mc_euler_probability(erf_space_region, model, time)
-println("Monte Carlo probability: ", mc_prob)
+## Plot the probability prediction over time
+plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, n_points=50, geometric=false)
+plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, plt=plt_vp_prob, n_points=50, geometric=true)
+#plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, duration, n_points=50)
+plt_vp_prob = plot_euler_mc_prob_vs_time(plt_vp_prob, erf_space_region, model, duration, n_points=50, n_samples=500)
+fig4 = plot(plt_vp_prob, title="Probability vs. time for region")
 
-vol_poly_prob = probability(erf_space_region, time, integ_poly)
-println("Volume polynomial probability: ", vol_poly_prob)
+
+## Compare integration methods
+#mc_prob = mc_euler_probability(erf_space_region, time, model)
+#println("Monte Carlo probability: ", mc_prob)
+#
+#vol_poly_prob = probability(erf_space_region, time, integ_poly)
+#println("Volume polynomial probability: ", vol_poly_prob)
 
 display(fig1)
 display(fig2)
 display(fig3)
+display(fig4)

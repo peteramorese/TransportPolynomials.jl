@@ -68,3 +68,27 @@ function scale_polynomial(p::AbstractPolynomialLike, vars::Vector{<:Multivariate
     subst = Dict(x => (1/scale) * x for x in vars)
     return subs(p, subst...)
 end
+
+function sos_coeff_mag_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::Int=1, bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing)
+    if isnothing(bounding_region)
+        dim = nvariables(coeff)
+        bounding_region = Hyperrectangle(low=zeros(dim), high=ones(dim))
+    end
+        
+    coeff_deg = maxdegree(coeff)
+    lagrangian_degree = coeff_deg + lagrangian_degree_inc
+    #lagrangian_degree = 12
+    @info "SoS Bounding coefficient polynomial of degree : $coeff_deg, using lagrangian degree: $lagrangian_degree"
+
+    pre_scale = 1.0
+    l = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
+    println("M lower bound: ", l)
+    u = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
+    println("M upper bound: ", u)
+
+    return max(abs(l), abs(u))
+end
+
+function reduce_poly(p::AbstractPolynomialLike, max_degree::Int, upper_bound::Bool=false)
+    
+end

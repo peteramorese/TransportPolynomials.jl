@@ -14,7 +14,7 @@ end
 
 struct SpatioTemporalPoly
     x_vars::Vector{<:MultivariatePolynomials.AbstractVariable}
-    t_var::Variable
+    t_var::MultivariatePolynomials.AbstractVariable
     p::AbstractPolynomialLike
 end
 
@@ -26,7 +26,7 @@ function (stp::SpatioTemporalPoly)(x::Vector{Float64}, t::Float64)
 end
 
 struct TemporalPoly
-    t_var::Variable
+    t_var::MultivariatePolynomials.AbstractVariable
     p::AbstractPolynomialLike
 end
 

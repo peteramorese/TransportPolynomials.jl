@@ -34,7 +34,7 @@ end
 
 function plot_2D_erf_space_pdf(model::SystemModel, t_eval::Float64; n_points::Int=100, n_timesteps::Int=100)
     function euler_pdf(x_eval::Vector{Float64})
-        return euler_density(x_eval, t_eval, model, n_timesteps)
+        return euler_density(x_eval, t_eval, model, n_timesteps=n_timesteps)
     end
     return plot_2D_pdf(euler_pdf, (0, 1), (0, 1), n_points=n_points, title="ERF-space Euler pdf")
 end
@@ -44,7 +44,7 @@ function plot_2D_pdf(model::SystemModel, t_eval::Float64, xlim, ylim; n_points::
     function euler_pdf(x_eval::Vector{Float64})
         u_eval = cdf.(d, x_eval)
         volume_change = prod(pdf.(d, x_eval))
-        return volume_change * euler_density(u_eval, t_eval, model, n_timesteps)
+        return volume_change * euler_density(u_eval, t_eval, model, n_timesteps=n_timesteps)
     end
     return plot_2D_pdf(euler_pdf, xlim, ylim, n_points=n_points, title="State space Euler pdf")
 end
@@ -134,7 +134,9 @@ function plot_vol_poly_density_vs_time(x_eval::Vector{Float64}, vol_poly::Spatio
     for t in tpts
         append!(volpts, density(x_eval, t, vol_poly))
     end
-    return plot(tpts, volpts, label="Vol Poly Density", xlabel="t", ylabel="p(x)", kwargs...)
+    plt = plot(tpts, volpts, label="Vol Poly Density", xlabel="t", ylabel="p(x)", kwargs...)
+    ylims!(plt, (0, min(10, maximum(volpts))))
+    return plt
 end
 
 function plot_vol_poly_density_vs_time(x_eval::Vector{Float64}, vol_poly::SpatioTemporalPoly, bound_poly::TemporalPoly, duration::Float64; n_points::Int=100, kwargs...)
@@ -148,15 +150,15 @@ function plot_vol_poly_density_vs_time(x_eval::Vector{Float64}, vol_poly::Spatio
     plt = plot(tpts, volpts, label="Vol Poly Density", xlabel="t", ylabel="p(x)", kwargs...)
     plot!(plt, tpts, volpts + errorpts, color=:black, linestyle=:dash)
     plot!(plt, tpts, volpts - errorpts, color=:black, linestyle=:dash)
-    ylims!(plt, (0, maximum(volpts + errorpts)))
+    ylims!(plt, (0, min(10, maximum(volpts + errorpts))))
     return plt
 end
 
-function plot_mc_euler_density_vs_time(x_eval::Vector{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, kwargs...)
+function plot_euler_density_vs_time(x_eval::Vector{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, kwargs...)
     tpts = range(0.0, duration, length=n_points)
     volpts = []
     for t in tpts
-        append!(volpts, mc_euler_density(x_eval, t, model))
+        append!(volpts, euler_density(x_eval, t, model))
     end
     return plot(tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="p(x)", kwargs...)
 end
@@ -168,4 +170,58 @@ function plot_euler_density_vs_time(plt::Plots.Plot, x_eval::Vector{Float64}, mo
         append!(volpts, euler_density(x_eval, t, model))
     end
     return plot(plt, tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="p(x)", kwargs...)
+end
+
+function plot_integ_poly_prob_vs_time(region::Hyperrectangle{Float64}, integ_poly::SpatioTemporalPoly, duration::Float64; n_points::Int=100, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, probability(region, t, integ_poly))
+    end
+    plt = plot(tpts, volpts, label="Integ Poly Probability", xlabel="t", ylabel="P(x∈R)", kwargs...)
+    ylims!(plt, (0, 1))
+    return plt
+end
+
+function plot_integ_poly_prob_vs_time(region::Hyperrectangle{Float64}, integ_poly::SpatioTemporalPoly, bound_poly::TemporalPoly, duration::Float64; plt::Union{Plots.Plot, Nothing}=nothing, n_points::Int=100, geometric::Bool=false, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    volpts_u_bound = []
+    for t in tpts
+        if geometric
+            prob, u_bound = probability_and_geometric_ubound(region, t, integ_poly, bound_poly)
+        else
+            prob, u_bound = probability_and_ubound(region, t, integ_poly, bound_poly)
+        end
+        append!(volpts, prob)
+        append!(volpts_u_bound, u_bound)
+    end
+    if isnothing(plt)
+        plt = plot(tpts, volpts, label="Integ Poly Probability", xlabel="t", ylabel="P(x∈R)", kwargs...)
+    else
+        plot!(plt, tpts, volpts, label="Integ Poly Probability", xlabel="t", ylabel="P(x∈R)", kwargs...)
+    end
+    plot!(plt, tpts, volpts_u_bound, color=:black, linestyle=:dash, label="Upper bound")
+    ylims!(plt, (0, 1))
+    return plt
+end
+
+function plot_euler_mc_prob_vs_time(region::Hyperrectangle{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, n_samples::Int=1000, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, mc_euler_probability(region, t, model, n_samples=n_samples))
+    end
+    plt = plot(tpts, volpts, label="Monte Carlo Probability", xlabel="t", ylabel="P(x∈R)", kwargs...)
+    ylims!(plt, (0, 1))
+    return plt
+end
+
+function plot_euler_mc_prob_vs_time(plt::Plots.Plot, region::Hyperrectangle{Float64}, model::SystemModel, duration::Float64; n_points::Int=100, n_samples::Int=1000, kwargs...)
+    tpts = range(0.0, duration, length=n_points)
+    volpts = []
+    for t in tpts
+        append!(volpts, mc_euler_probability(region, t, model, n_samples=n_samples))
+    end
+    return plot(plt, tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="P(x∈R)", kwargs...)
 end
