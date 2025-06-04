@@ -88,7 +88,3 @@ function sos_coeff_mag_bound(coeff::AbstractPolynomialLike; lagrangian_degree_in
 
     return max(abs(l), abs(u))
 end
-
-function reduce_poly(p::AbstractPolynomialLike, max_degree::Int, upper_bound::Bool=false)
-    
-end

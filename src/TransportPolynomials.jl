@@ -12,8 +12,8 @@ using MultivariatePolynomials
 using SumOfSquares
 using JuMP
 using MosekTools
-using Symbolics
-using BellBruno
+#using Symbolics
+#using BellBruno
 
 include("DataStructures.jl")
 include("Visualizaton.jl")
@@ -21,9 +21,10 @@ include("SystemRegression.jl")
 include("VolumePolynomial.jl")
 include("PolynomialBounds.jl")
 include("Probability.jl")
+include("PicardIteration.jl")
 
 # DataStructures
-export SystemModel, SpatioTemporalPoly, TemporalPoly
+export SystemModel, SpatioTemporalPoly, SpatioTemporalPolyVector, TemporalPoly
 
 # Visualization
 export plot_data, plot_polynomial_surface, plot_2D_pdf, 
@@ -41,5 +42,8 @@ export density, probability, evaluate_integral, propagate_sample, euler_density,
 
 # PolynomialBounds
 export sos_bound, sos_coeff_mag_bound
+
+# PicardIteration
+export picard_operator, picard_vol_poly
 
 end

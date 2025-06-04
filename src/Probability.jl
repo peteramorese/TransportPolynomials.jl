@@ -41,7 +41,7 @@ function evaluate_integral(antideriv, region::Hyperrectangle{Float64})
     return integral
 end
 
-function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel, n_timesteps::Int=100; forward::Bool=true)
+function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
     Δt = t_duration / n_timesteps
 
     multiplier = 1 
