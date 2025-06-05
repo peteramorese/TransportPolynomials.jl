@@ -8,7 +8,8 @@ function (model::SystemModel)(x::Vector{Float64})
     return Vector{Float64}([subs(model.f[i], Tuple(model.x_vars) => Tuple(x)) for i in 1:length(model.f)])
 end
 
-function dimension(model::SystemModel)
+function dimension(model::SystemModel)::Int64
+    
     return length(model.f)
 end
 

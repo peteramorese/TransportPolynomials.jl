@@ -85,7 +85,23 @@ function plot_2D_erf_space_vf(model::SystemModel; n_points::Int=100, scale::Floa
                    title="System Vector Field")
 end
 
-function plot_2D_region(plt, region::Hyperrectangle{Float64}; alpha=0.5)
+function plot_2D_region(plt, region::Hyperrectangle{Float64}; alpha=0.5, color=:red, label="")
+    if LazySets.dim(region) != 2
+        error("This plot function only supports 2D Hyperrectangles.")
+    end
+
+    # Get center and radius
+    c = region.center
+    r = region.radius
+
+    # Coordinates of the rectangle corners (counter-clockwise)
+    x = [c[1] - r[1], c[1] + r[1], c[1] + r[1], c[1] - r[1], c[1] - r[1]]
+    y = [c[2] - r[2], c[2] - r[2], c[2] + r[2], c[2] + r[2], c[2] - r[2]]
+
+    plot!(x, y, seriestype=:shape, fillalpha=alpha, c=color, label=label) 
+end
+
+function plot_2D_region_in_3D(plt, region::Hyperrectangle{Float64}; alpha=0.5)
     # Get base rectangle center and radius
     c = region.center
     r = region.radius
@@ -224,4 +240,8 @@ function plot_euler_mc_prob_vs_time(plt::Plots.Plot, region::Hyperrectangle{Floa
         append!(volpts, mc_euler_probability(region, t, model, n_samples=n_samples))
     end
     return plot(plt, tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="P(x∈R)", kwargs...)
+end
+
+function plot_2D_reachable_sets(solz)
+    plot(solz; vars=(1,2), xlims=(0.0, 1.0), ylims=(0.0, 1.0))
 end
