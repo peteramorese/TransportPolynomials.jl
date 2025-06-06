@@ -69,7 +69,7 @@ function scale_polynomial(p::AbstractPolynomialLike, vars::Vector{<:Multivariate
     return subs(p, subst...)
 end
 
-function sos_coeff_mag_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::Int=1, bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing)
+function coeff_sos_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::Int=1, bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing, upper_only::Bool=false)
     if isnothing(bounding_region)
         dim = nvariables(coeff)
         bounding_region = Hyperrectangle(low=zeros(dim), high=ones(dim))
@@ -81,10 +81,15 @@ function sos_coeff_mag_bound(coeff::AbstractPolynomialLike; lagrangian_degree_in
     @info "SoS Bounding coefficient polynomial of degree : $coeff_deg, using lagrangian degree: $lagrangian_degree"
 
     pre_scale = 1.0
-    l = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
-    println("M lower bound: ", l)
+    
     u = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
     println("M upper bound: ", u)
-
-    return max(abs(l), abs(u))
+    if upper_only
+        return u
+    else
+        l = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
+        println("M lower bound: ", l)
+        return max(abs(l), abs(u))
+    end
 end
+

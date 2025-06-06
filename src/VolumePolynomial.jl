@@ -55,10 +55,10 @@ function create_integrator_poly(vol_poly::SpatioTemporalPoly)
     return SpatioTemporalPoly(vol_poly.x_vars, vol_poly.t_var, p_antideriv)
 end
 
-function create_basic_sos_bound_poly(nxt_coeff::AbstractPolynomialLike, t_var::MultivariatePolynomials.AbstractVariable, deg_vol_poly::Int; lagrangian_degree_inc::Int=1)
+function create_basic_sos_bound_poly(nxt_coeff::AbstractPolynomialLike, t_var::MultivariatePolynomials.AbstractVariable, deg_vol_poly::Int; lagrangian_degree_inc::Int=1, upper_only::Bool=false)
     # Bound the nxt coefficient spatial polynomial over the whole domain (0, 1)^d
     # The integral over any region in the domain is then (naively) bounded by Vol((0, 1)^d) * M = 1 * M
-    M = sos_coeff_mag_bound(nxt_coeff::AbstractPolynomialLike, lagrangian_degree_inc=lagrangian_degree_inc)
+    M = coeff_sos_bound(nxt_coeff::AbstractPolynomialLike, lagrangian_degree_inc=lagrangian_degree_inc, upper_only=upper_only)
 
     bound_poly_coeff = M / factorial(deg_vol_poly + 1)
     return TemporalPoly(t_var, polynomial(bound_poly_coeff * t_var^(deg_vol_poly + 1)))

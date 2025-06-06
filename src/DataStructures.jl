@@ -51,3 +51,4 @@ end
 function (tp::TemporalPoly)(t::Float64)
     return convert(Float64, subs(tp.p, tp.t_var => t))
 end
+

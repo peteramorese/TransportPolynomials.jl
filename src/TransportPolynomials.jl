@@ -12,10 +12,11 @@ using MultivariatePolynomials
 using SumOfSquares
 using JuMP
 using MosekTools
-using ReachabilityAnalysis
 using ModelingToolkit
 #using Symbolics
 #using BellBruno
+
+import ReachabilityAnalysis as RA 
 
 include("DataStructures.jl")
 include("Visualizaton.jl")
@@ -25,6 +26,7 @@ include("PolynomialBounds.jl")
 include("Probability.jl")
 include("PicardIteration.jl")
 include("ReachableSets.jl")
+include("TaylorSpline.jl")
 
 # DataStructures
 export SystemModel, SpatioTemporalPoly, SpatioTemporalPolyVector, TemporalPoly
@@ -44,12 +46,15 @@ export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff,
 export density, probability, evaluate_integral, propagate_sample, euler_density, mc_euler_probability
 
 # PolynomialBounds
-export sos_bound, sos_coeff_mag_bound
+export sos_bound, coeff_sos_bound
 
 # PicardIteration
 export picard_operator, picard_vol_poly
 
 # ReachableSets
 export compute_taylor_reach_sets, compute_final_hyperrectangle
+
+# TaylorSpline
+export TaylorSplineSegment, TaylorSpline, create_taylor_spline 
 
 end

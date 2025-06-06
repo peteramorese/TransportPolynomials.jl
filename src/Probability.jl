@@ -70,7 +70,7 @@ function mc_euler_probability(region::Hyperrectangle{Float64}, t_eval::Float64, 
     count = 0
     for _ in 1:n_samples
         x_eval_0 = rand(Uniform(0, 1), length(model.x_vars))
-        x_eval_t = propagate_sample(x_eval_0, t_eval, model, n_timesteps, forward=true)
+        x_eval_t = propagate_sample(x_eval_0, t_eval, model, n_timesteps=n_timesteps, forward=true)
         if x_eval_t ∈ region
             count += 1
         end

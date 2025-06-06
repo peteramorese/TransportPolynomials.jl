@@ -34,7 +34,7 @@ vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, t, order)
 
 println("Created volume polynomial")
 
-bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=1)
+bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=2, upper_only=true)
 
 println("Created bound polynomial")
 
@@ -49,7 +49,7 @@ println("Created integrator polynomial")
 plt_vf = plot_2D_erf_space_vf(model, scale=.3, n_points=20)
 plt_erf = plot_2D_erf_space_pdf(model, time, n_points=30, n_timesteps=50)
 plt_ss = plot_2D_pdf(model, time, (-3.0, 3.0), (-3.0, 3.0), n_points=30, n_timesteps=50)
-plot_2D_region(plt_erf, erf_space_region, alpha=0.5)
+plot_2D_region_in_3D(plt_erf, erf_space_region, alpha=0.5)
 
 # Vol poly
 plt_vp_erf = plot_2D_erf_space_pdf(vol_poly, time, n_points=30)
