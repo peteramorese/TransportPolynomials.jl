@@ -52,3 +52,7 @@ function (tp::TemporalPoly)(t::Float64)
     return convert(Float64, subs(tp.p, tp.t_var => t))
 end
 
+function differentiate(tp::TemporalPoly)
+    # Differentiate the temporal polynomial with respect to the time variable
+    return TemporalPoly(tp.t_var, differentiate(tp.p, tp.t_var))
+end

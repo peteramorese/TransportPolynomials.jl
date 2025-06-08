@@ -239,7 +239,7 @@ function plot_euler_mc_prob_vs_time(plt::Plots.Plot, region::Hyperrectangle{Floa
     for t in tpts
         append!(volpts, mc_euler_probability(region, t, model, n_samples=n_samples))
     end
-    return plot(plt, tpts, volpts, label="Monte Carlo Density", xlabel="t", ylabel="P(x∈R)", kwargs...)
+    return plot(plt, tpts, volpts, label="Monte Carlo Probability", xlabel="t", ylabel="P(x∈R)", kwargs...)
 end
 
 function plot_2D_reachable_sets(solz)
