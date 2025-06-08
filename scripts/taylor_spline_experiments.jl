@@ -37,7 +37,8 @@ println("Created integrator polynomial")
 
 duration = 1.0
 
-ts = create_taylor_spline(model, t, order, erf_space_region, duration, n_segments=7)
+ts = create_box_taylor_spline(model, t, order, erf_space_region, duration, n_segments=10)
+ts_cont = create_continuous_taylor_spline(model, t, order, erf_space_region, duration, n_segments=10)
 
 print("Taylor spline: ")
 function print_ts()
@@ -56,8 +57,9 @@ println("Computing volume polynomial...")
 plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, n_points=50, geometric=false)
 #plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, plt=plt_vp_prob, n_points=50, geometric=true)
 #plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, duration, n_points=50)
-println("Computing monte carlo...")
-plt_vp_prob = plot_euler_mc_prob_vs_time(plt_vp_prob, erf_space_region, model, duration, n_points=30, n_samples=300)
+
+#println("Computing monte carlo...")
+#plt_vp_prob = plot_euler_mc_prob_vs_time(plt_vp_prob, erf_space_region, model, duration, n_points=30, n_samples=300)
 
 
 println("Computing taylor spline...")
@@ -66,7 +68,9 @@ println("Computing taylor spline...")
 
 t_pts = range(0.0, duration, 100)
 ts_pts = [ts(t) for t in t_pts]
-plot!(plt_vp_prob, t_pts, ts_pts, label="Taylor Spline")
+ts_cont_pts = [ts_cont(t) for t in t_pts]
+plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
+plot!(plt_vp_prob, t_pts, ts_cont_pts, label="Continuous Taylor Spline")
 #fig2 = plot(t_pts, ts_pts, label="Taylor Spline")
 
 

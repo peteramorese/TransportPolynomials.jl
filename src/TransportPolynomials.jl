@@ -55,6 +55,6 @@ export picard_operator, picard_vol_poly
 export compute_taylor_reach_sets, compute_final_hyperrectangle
 
 # TaylorSpline
-export TaylorSplineSegment, TaylorSpline, create_taylor_spline 
+export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_continuous_taylor_spline 
 
 end

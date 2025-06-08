@@ -54,5 +54,5 @@ end
 
 function differentiate(tp::TemporalPoly)
     # Differentiate the temporal polynomial with respect to the time variable
-    return TemporalPoly(tp.t_var, differentiate(tp.p, tp.t_var))
+    return TemporalPoly(tp.t_var, MultivariatePolynomials.differentiate(tp.p, tp.t_var))
 end

@@ -1,7 +1,7 @@
 function divergence(x_vars::Vector{<:MultivariatePolynomials.AbstractVariable}, p::Vector{<:MultivariatePolynomials.AbstractPolynomialLike})
     divergence_poly = 0
     for i in 1:length(x_vars)
-        divergence_poly += differentiate(p[i], x_vars[i])
+        divergence_poly += MultivariatePolynomials.differentiate(p[i], x_vars[i])
     end
     return divergence_poly
 end

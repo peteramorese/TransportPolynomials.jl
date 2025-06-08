@@ -26,8 +26,8 @@ end
 function create_box_taylor_spline(model::SystemModel, t_var::MultivariatePolynomials.AbstractVariable, vol_poly_degree::Int, init_set::Hyperrectangle{Float64}, duration::Float64; n_segments::Int=10, lagrangian_degree_inc::Int=1, geometric_bound=true)
     # Construct the volume polynomial components
     coefficients = compute_coefficients(model, vol_poly_degree + 1) # Add one for the bound
-    t_monoms = monomials(t_var, 1:vol_poly_degree)
-    taylor_scales = [1/factorial(i) for i in 1:vol_poly_degree]
+    t_monoms = monomials(t_var, 0:vol_poly_degree)
+    taylor_scales = [1/factorial(i) for i in 0:vol_poly_degree]
     t_terms = t_monoms .* taylor_scales
 
     coeff_antiderivs = []
@@ -100,8 +100,8 @@ end
 function create_continuous_taylor_spline(model::SystemModel, t_var::MultivariatePolynomials.AbstractVariable, vol_poly_degree::Int, init_set::Hyperrectangle{Float64}, duration::Float64; n_segments::Int=10, lagrangian_degree_inc::Int=1, geometric_bound=true)
     # Construct the volume polynomial components
     coefficients = compute_coefficients(model, vol_poly_degree + 1) # Add one for the bound
-    t_monoms = monomials(t_var, 1:vol_poly_degree)
-    taylor_scales = [1/factorial(i) for i in 1:vol_poly_degree]
+    t_monoms = monomials(t_var, 0:vol_poly_degree)
+    taylor_scales = [1/factorial(i) for i in 0:vol_poly_degree]
     t_terms = t_monoms .* taylor_scales
 
     coeff_antiderivs = []
@@ -123,7 +123,8 @@ function create_continuous_taylor_spline(model::SystemModel, t_var::Multivariate
     end
 
     # Compute the upper bounds on each coefficient
-    coefficient_bounds = [coeff_sos_bound(coeff, lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true) for coeff in coefficients]
+    last_coeff_upper_bound = coeff_sos_bound(coefficients[end], lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true)
+    coefficient_lower_bounds = [coeff_sos_bound(-coeff, lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true) for coeff in coefficients[1:end-1]]
 
     segment_duration = duration / n_segments
 
@@ -145,18 +146,23 @@ function create_continuous_taylor_spline(model::SystemModel, t_var::Multivariate
             
             # Find the derivative bounds using the previous segments volume function
             prev_segment_vf = prev_segment.volume_function
-            prev_seg_derivs = []
+            prev_seg_evals = []
             bounding_function = prev_segment_vf
-            for i in 1:vol_poly_degree
-                push!(prev_seg_derivs, bounding_function(prev_segment.duration))
+            for i in 0:vol_poly_degree
+                push!(prev_seg_evals, bounding_function(prev_segment.duration))
                 if i < vol_poly_degree
                     bounding_function = differentiate(bounding_function)
                 end
             end
 
-            # Adjust the 
+            # Adjust the coeff integrals to account for the area difference
+            volume_difference = coeff_integrals[1] - prev_seg_evals[1] # Difference between volume of the bounding box and previous segments predicted volume
+            adjusted_coeff_integrals = [coeff_integrals[1]] # The zeroth order term is just the volume of the box, which will hopefully be worse than the previous segments volume
+            append!(adjusted_coeff_integrals, [int - lb * volume_difference for (int, lb) in zip(coeff_integrals[2:end], coefficient_lower_bounds)])
 
-            coeff_values = max.(coeff_integrals, prev_seg_derivs)
+            println("Adjusted coeff integrals: ", adjusted_coeff_integrals)
+            println("Previous segment evals: ", prev_seg_evals)
+            coeff_integrals = min.(adjusted_coeff_integrals, prev_seg_evals)
         end
 
 
@@ -164,7 +170,7 @@ function create_continuous_taylor_spline(model::SystemModel, t_var::Multivariate
         volume_function_est = coeff_integrals' * t_terms
 
         # Taylor error bound polynomial
-        taylor_error_bound = coefficient_bounds[end] / factorial(vol_poly_degree + 1) * t_var^(vol_poly_degree + 1)
+        taylor_error_bound = last_coeff_upper_bound / factorial(vol_poly_degree + 1) * t_var^(vol_poly_degree + 1)
 
         ## Construct the bound polynomial for the segment
         #if geometric_bound
