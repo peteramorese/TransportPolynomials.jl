@@ -48,8 +48,8 @@ function create_box_taylor_spline(model::SystemModel, t_var::MultivariatePolynom
         return evaluate_integral(coeff_antideriv_eval, set)
     end
 
-    # Compute the upper bounds on each coefficient
-    coefficient_bounds = [coeff_sos_bound(coeff, lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true) for coeff in coefficients]
+    # Compute the upper bounds on the next coefficient
+    nxt_coeff_ub = coeff_sos_bound(coefficients[end], lagrangian_degree_inc=lagrangian_degree_inc, bound_type=Upper)
 
     segment_duration = duration / n_segments
 
@@ -69,7 +69,7 @@ function create_box_taylor_spline(model::SystemModel, t_var::MultivariatePolynom
         volume_function_est = coeff_integrals' * t_terms
 
         # Taylor error bound polynomial
-        taylor_error_bound = coefficient_bounds[end] / factorial(vol_poly_degree + 1) * t_var^(vol_poly_degree + 1)
+        taylor_error_bound = nxt_coeff_ub / factorial(vol_poly_degree + 1) * t_var^(vol_poly_degree + 1)
 
         ## Construct the bound polynomial for the segment
         #if geometric_bound
@@ -123,8 +123,8 @@ function create_continuous_taylor_spline(model::SystemModel, t_var::Multivariate
     end
 
     # Compute the upper bounds on each coefficient
-    last_coeff_upper_bound = coeff_sos_bound(coefficients[end], lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true)
-    coefficient_lower_bounds = [coeff_sos_bound(-coeff, lagrangian_degree_inc=lagrangian_degree_inc, upper_only=true) for coeff in coefficients[1:end-1]]
+    last_coeff_upper_bound = coeff_sos_bound(coefficients[end], lagrangian_degree_inc=lagrangian_degree_inc, bound_type=Upper)
+    coefficient_lower_bounds = [coeff_sos_bound(coeff, lagrangian_degree_inc=lagrangian_degree_inc, bound_type=Lower) for coeff in coefficients[1:end-1]]
 
     segment_duration = duration / n_segments
 

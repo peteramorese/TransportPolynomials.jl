@@ -69,7 +69,9 @@ function scale_polynomial(p::AbstractPolynomialLike, vars::Vector{<:Multivariate
     return subs(p, subst...)
 end
 
-function coeff_sos_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::Int=1, bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing, upper_only::Bool=false)
+@enum BoundType Upper Lower Magnitude
+
+function coeff_sos_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::Int=1, bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing, bound_type::BoundType=Magnitude)
     if isnothing(bounding_region)
         dim = nvariables(coeff)
         bounding_region = Hyperrectangle(low=zeros(dim), high=ones(dim))
@@ -82,14 +84,70 @@ function coeff_sos_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::I
 
     pre_scale = 1.0
     
-    u = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
-    println("M upper bound: ", u)
-    if upper_only
+    if bound_type == Upper 
+        u = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
+        println("M upper bound: ", u)
         return u
-    else
+    elseif bound_type == Lower
+        l = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
+        println("M lower bound: ", l)
+        return l
+    elseif bound_type == Magnitude
+        u = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=true, pre_scale=pre_scale, silent=false)
+        println("M upper bound: ", u)
         l = sos_bound(coeff, variables(coeff), bounding_region, lagrangian_degree, upper_bound=false, pre_scale=pre_scale, silent=false)
         println("M lower bound: ", l)
         return max(abs(l), abs(u))
+    else
+        throw(ArgumentError("Invalid bound type: $bound_type. Use Upper, Lower, or Magnitude."))
+    end
+end
+
+function intarith_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynomials.AbstractVariable}, region::Hyperrectangle{Float64})
+    # Construct an interval box: each variable gets an interval
+    bounds = [interval(ci - ri, ci + ri) for (ci, ri) in zip(region.center, region.radius)]
+
+    # Create a dictionary mapping variable => interval
+    if length(vars) != length(bounds)
+        error("Number of variables in polynomial does not match hyperrectangle dimension")
+    end
+
+    env = Dict{MultivariatePolynomials.AbstractVariable, IntervalArithmetic.Interval{Float64}}()
+    for (v, b) in zip(vars, bounds)
+        env[v] = b
+    end
+
+    # Evaluate the polynomial with interval arithmetic
+    resulting_interval = p(env...) #evaluate_interval(p, env)
+    return resulting_interval
+end
+
+function coeff_intarith_bound(coeff::AbstractPolynomialLike; bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing, bound_type::BoundType=Magnitude)
+    if isnothing(bounding_region)
+        dim = nvariables(coeff)
+        bounding_region = Hyperrectangle(low=zeros(dim), high=ones(dim))
+    end
+
+    coeff_deg = maxdegree(coeff)
+    @info "Interval arithmetic Bounding coefficient polynomial of degree : $coeff_deg"
+
+    if bound_type == Upper
+        u = intarith_bound(coeff, variables(coeff), bounding_region).hi
+        println("M upper bound: ", u)
+        return u
+    elseif bound_type == Lower
+        l = intarith_bound(coeff, variables(coeff), bounding_region).lo
+        println("M lower bound: ", l)
+        return l
+    elseif bound_type == Magnitude
+        bounds = intarith_bound(coeff, variables(coeff), bounding_region)
+        u = bounds.hi
+        println("M upper bound: ", u)
+        l = bounds.lo
+        println("M lower bound: ", l)
+        return max(abs(l), abs(u))
+    else
+        throw(ArgumentError("Invalid bound type: $bound_type. Use Upper, Lower, or Magnitude."))
     end
 end
 

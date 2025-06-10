@@ -13,6 +13,7 @@ using SumOfSquares
 using JuMP
 using MosekTools
 using ModelingToolkit
+using IntervalArithmetic
 #using Symbolics
 #using BellBruno
 
@@ -21,8 +22,8 @@ import ReachabilityAnalysis as RA
 include("DataStructures.jl")
 include("Visualizaton.jl")
 include("SystemRegression.jl")
-include("VolumePolynomial.jl")
 include("PolynomialBounds.jl")
+include("VolumePolynomial.jl")
 include("Probability.jl")
 include("PicardIteration.jl")
 include("ReachableSets.jl")
@@ -39,14 +40,15 @@ export plot_data, plot_polynomial_surface, plot_2D_pdf,
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff, 
-    create_integrator_poly, create_basic_sos_bound_poly, evaluate_integral, 
+    create_integrator_poly, create_basic_sos_bound_poly, create_basic_intarith_bound_poly, evaluate_integral, 
     density, euler_density, probability, mc_euler_probability
 
 # Probability
 export density, probability, evaluate_integral, propagate_sample, euler_density, mc_euler_probability
 
 # PolynomialBounds
-export sos_bound, coeff_sos_bound
+export BouldType, Upper, Lower, Magnitude
+export sos_bound, coeff_sos_bound, coeff_intarith_bound
 
 # PicardIteration
 export picard_operator, picard_vol_poly
