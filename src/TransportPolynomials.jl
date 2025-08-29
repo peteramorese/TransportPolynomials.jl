@@ -15,6 +15,7 @@ using MosekTools
 using ModelingToolkit
 using IntervalArithmetic
 using SpecialFunctions
+using FFTW
 #using Symbolics
 #using BellBruno
 
@@ -66,6 +67,6 @@ export compute_taylor_reach_sets, compute_final_hyperrectangle
 export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_continuous_taylor_spline 
 
 # BernsteinPolynomial
-export BernsteinPolynomial, degree, dimension, decasteljau, differentiate, integrate
+export BernsteinPolynomial, degree, dimension, decasteljau, differentiate, integrate, product
 
 end

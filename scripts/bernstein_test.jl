@@ -13,12 +13,16 @@ using LazySets
 #coeffs[:, :, 1] = [1.9 2.9; 4.9 5.9]
 #coeffs[:, :, 2] = [2.1 4.1; 3.1 5.1]
 #coeffs = reshape([1.9, 2.1, 4.9, 3.1, 2.9, 4.1, 5.9, 5.1], 2, 2, 2)
-coeffs = reshape([1.0, 2.0, 4.0, 3.0, 7.0, 4.0, 2.0, 4.0, 5.0, 5.0, 8.0, 8.0, 3.0, 6.0, 6.0, 7.0, 9.0, 10.0], 2, 3, 3)
+coeffs_p = reshape([1.0, 2.0, 4.0, 3.0, 7.0, 4.0, 2.0, 4.0, 5.0, 5.0, 8.0, 8.0, 3.0, 6.0, 6.0, 7.0, 9.0, 10.0], 2, 3, 3)
+coeffs_q = reshape([1.5, 2.5, 4.5, 3.5, 7.5, 4.5, 2.5, 4.5, 5.5, 5.5, 8.5, 8.5, 3.5, 6.5, 6.5, 7.5, 9.5, 10.5], 2, 3, 3)
 
 
 
-p = BernsteinPolynomial{Float64, 3}(coeffs)
+p = BernsteinPolynomial{Float64, 3}(coeffs_p)
+q = BernsteinPolynomial{Float64, 3}(coeffs_q)
+prod = product(p, q)
 x = [0.5 0.5 0.3; 0.25 0.75 0.8]
 #x = [0.5, 0.5, 0.3]
 println("De casteljau: ", decasteljau(p, x))
+println("prod De casteljau: ", decasteljau(prod, x))
 println("integral: ", integrate(p, Hyperrectangle(low=[0.1, 0.2, 0.3], high=[0.5, 0.6, 0.7])))

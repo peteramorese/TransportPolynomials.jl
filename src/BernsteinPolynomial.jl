@@ -99,6 +99,62 @@ function integrate(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}
     return sum(p.coeffs .* basis_integrals)
 end
 
+function product(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
+
+    # Degrees per dimension
+    n = size(p.coeffs) .- 1
+    m = size(q.coeffs) .- 1
+    @assert length(n) == D == length(m) "Dimension mismatch."
+    # Output size = n+m+1 per dim
+    outsz = n .+ m .+ 1
+
+    # Work in a floating type to avoid integer overflow in binomials
+    Twork = Float64
+
+    # Build per-dimension binomial weight arrays
+    Wn  = _binomial_weight_array(n,  Twork)        # shape (n.+1)
+    Wm  = _binomial_weight_array(m,  Twork)        # shape (m.+1)
+    Wnm = _binomial_weight_array(n .+ m, Twork)    # shape (outsz)
+
+    # 1) Scale inputs by their binomial weights
+    A = Twork.(p.coeffs) .* Wn
+    B = Twork.(q.coeffs) .* Wm
+
+    # 2) Zero-pad to the full linear-convolution size and FFT-multiply
+    Ap = _pad_to(A, outsz)
+    Bp = _pad_to(B, outsz)
+
+    FA = fft(Ap)
+    FB = fft(Bp)
+    Cscaled = real(ifft(FA .* FB))   # linear conv because we zero-padded to outsz
+
+    # 3) Divide out the output binomial weights to return to Bernstein basis
+    C = Cscaled ./ Wnm
+
+    # Return a polynomial of degree n+m
+    return BernsteinPolynomial{Twork,D}(C)
+end
+
+# --- helpers ---
+
+function _binomial_weight_array(n::NTuple{D,Int}, ::Type{T}) where {D,T}
+    sz = n .+ 1
+    W = ones(T, sz...)
+    @inbounds for d in 1:D
+        w = T.(binomial.(n[d], 0:n[d]))                    # vector length nd+1
+        shape = ntuple(i -> i == d ? n[d] + 1 : 1, D)      # broadcast shape
+        W .*= reshape(w, shape)
+    end
+    return W
+end
+
+function _pad_to(A::AbstractArray{T,D}, target::NTuple{D,Int}) where {T,D}
+    @assert all(size(A) .<= target) "Target size must be >= source size in every dimension."
+    P = zeros(T, target...)
+    P[ntuple(d -> 1:size(A,d), D)...] .= A
+    return P
+end
+
 #function antidifferentiate(p::BernsteinPolynomial{T, D}, integ_dim::Int) where {T, D}
 #   # Validate that the dimension `i` is within the bounds of the array dimensions
 #    if !(1 <= i <= D)
