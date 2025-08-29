@@ -14,6 +14,7 @@ using JuMP
 using MosekTools
 using ModelingToolkit
 using IntervalArithmetic
+using SpecialFunctions
 #using Symbolics
 #using BellBruno
 
@@ -24,10 +25,12 @@ include("Visualizaton.jl")
 include("SystemRegression.jl")
 include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
+include("BoundedVolumePolynomial.jl")
 include("Probability.jl")
 include("PicardIteration.jl")
 include("ReachableSets.jl")
 include("TaylorSpline.jl")
+include("BernsteinPolynomial.jl")
 
 # DataStructures
 export SystemModel, SpatioTemporalPoly, SpatioTemporalPolyVector, TemporalPoly
@@ -43,12 +46,15 @@ export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff,
     create_integrator_poly, create_basic_sos_bound_poly, create_basic_intarith_bound_poly, evaluate_integral, 
     density, euler_density, probability, mc_euler_probability
 
+# BoundedVolumePolynomial
+export TensorErrorVariables, create_tensor_error_variables
+
 # Probability
 export density, probability, evaluate_integral, propagate_sample, euler_density, mc_euler_probability
 
 # PolynomialBounds
 export BouldType, Upper, Lower, Magnitude
-export sos_bound, coeff_sos_bound, coeff_intarith_bound
+export sos_bound, dsos_bound, intarith_bound, coeff_sos_bound, coeff_intarith_bound
 
 # PicardIteration
 export picard_operator, picard_vol_poly
@@ -58,5 +64,8 @@ export compute_taylor_reach_sets, compute_final_hyperrectangle
 
 # TaylorSpline
 export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_continuous_taylor_spline 
+
+# BernsteinPolynomial
+export BernsteinPolynomial, degree, dimension, decasteljau, differentiate, integrate
 
 end

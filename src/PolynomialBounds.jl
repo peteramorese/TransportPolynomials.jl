@@ -6,7 +6,6 @@ function sos_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynom
         p = scale_polynomial(p, vars, pre_scale)
         region = scale_region(region, pre_scale)
     end
-    #println("Bounding: ", p, " \n in region: ", region)
 
     if maxdegree(p) > lagrangian_degree
         @warn "Polynomial degree ($(maxdegree(p))) exceeds the specified Lagrangian degree ($lagrangian_degree). Consider increasing Lagrangian degree."
@@ -40,8 +39,7 @@ function sos_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynom
         decomposition += σi * gi
     end
 
-    #@constraint(model, q - γ - decomposition >= 0, basis = ChebyshevBasisFirstKind)
-    @constraint(model, q - γ - decomposition >= 0)
+    @constraint(model, q - γ - decomposition ∈ SOSCone())
 
     @objective(model, Max, γ)
 
@@ -55,6 +53,82 @@ function sos_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynom
     bound = value(γ)
     return upper_bound ? -bound : bound
 end
+
+function dsos_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynomials.AbstractVariable}, region::Hyperrectangle{Float64}, lagrangian_degree::Int; upper_bound::Bool=false, pre_scale::Float64=1.0, silent=true)
+    d = length(vars)
+    
+    if pre_scale != 1.0
+        # Scale the polynomial and the region
+        p = scale_polynomial(p, vars, pre_scale)
+        region = scale_region(region, pre_scale)
+    end
+
+    if maxdegree(p) > lagrangian_degree
+        @warn "Polynomial degree ($(maxdegree(p))) exceeds the specified Lagrangian degree ($lagrangian_degree). Consider increasing Lagrangian degree."
+    end
+
+    q = upper_bound ? -p : p  # Flip sign if maximizing
+
+    model = SOSModel( optimizer_with_attributes(Mosek.Optimizer, "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => 1e-10, "MSK_IPAR_NUM_THREADS" => 1))
+    if silent
+        set_silent(model)  # Optional: suppress solver output
+    end
+
+    # SoS variable gamma (the bound)
+    @variable(model, γ)
+
+    # Define constraints of [0,1]^d
+    g = [polynomial(x - l) for (x, l) in zip(vars, low(region))]                 # x_i - l ≥ 0
+    append!(g, [polynomial(u - x) for (x, u) in zip(vars, high(region))])        # u - x_i ≥ 0
+
+    # SoS polynomial σ₀ (free term)
+    monobasis = monomials(vars, 0:lagrangian_degree)
+    @variable(model, σ₀, DSOSPoly(monomials(vars, 0:lagrangian_degree)))
+
+    # Multiplier SoS polynomials σᵢ for each gᵢ
+    @variable(model, σ[1:length(g)], DSOSPoly(monomials(vars, 0:lagrangian_degree)))
+
+    # Construct the decomposition constraint:
+    #     q(x) - γ == σ₀(x) + ∑ σᵢ(x) * gᵢ(x)
+    decomposition = σ₀
+    for (gi, σi) in zip(g, σ)
+        decomposition += σi * gi
+    end
+
+    @constraint(model, q - γ - decomposition ∈ DSOSCone())
+
+    @objective(model, Max, γ)
+
+    optimize!(model)
+
+    #println("Termination_status: ", termination_status(model))
+    if termination_status(model) != MOI.OPTIMAL
+        @warn "SoS optimization did not converge to optimality" termination_status(model)
+    end
+
+    bound = value(γ)
+    return upper_bound ? -bound : bound
+end
+
+function intarith_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynomials.AbstractVariable}, region::Hyperrectangle{Float64})
+    # Construct an interval box: each variable gets an interval
+    bounds = [interval(ci - ri, ci + ri) for (ci, ri) in zip(region.center, region.radius)]
+
+    # Create a dictionary mapping variable => interval
+    if length(vars) != length(bounds)
+        error("Number of variables in polynomial does not match hyperrectangle dimension")
+    end
+
+    env = Dict{MultivariatePolynomials.AbstractVariable, IntervalArithmetic.Interval{Float64}}()
+    for (v, b) in zip(vars, bounds)
+        env[v] = b
+    end
+
+    # Evaluate the polynomial with interval arithmetic
+    resulting_interval = p(env...) #evaluate_interval(p, env)
+    return resulting_interval
+end
+
 
 function scale_region(region::Hyperrectangle{Float64}, scale::Float64)
     # Scale the center and radius of the region
@@ -101,25 +175,6 @@ function coeff_sos_bound(coeff::AbstractPolynomialLike; lagrangian_degree_inc::I
     else
         throw(ArgumentError("Invalid bound type: $bound_type. Use Upper, Lower, or Magnitude."))
     end
-end
-
-function intarith_bound(p::AbstractPolynomialLike, vars::Vector{<:MultivariatePolynomials.AbstractVariable}, region::Hyperrectangle{Float64})
-    # Construct an interval box: each variable gets an interval
-    bounds = [interval(ci - ri, ci + ri) for (ci, ri) in zip(region.center, region.radius)]
-
-    # Create a dictionary mapping variable => interval
-    if length(vars) != length(bounds)
-        error("Number of variables in polynomial does not match hyperrectangle dimension")
-    end
-
-    env = Dict{MultivariatePolynomials.AbstractVariable, IntervalArithmetic.Interval{Float64}}()
-    for (v, b) in zip(vars, bounds)
-        env[v] = b
-    end
-
-    # Evaluate the polynomial with interval arithmetic
-    resulting_interval = p(env...) #evaluate_interval(p, env)
-    return resulting_interval
 end
 
 function coeff_intarith_bound(coeff::AbstractPolynomialLike; bounding_region::Union{Hyperrectangle{Float64}, Nothing}=nothing, bound_type::BoundType=Magnitude)

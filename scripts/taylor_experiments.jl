@@ -34,11 +34,11 @@ vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, t, order)
 
 println("Created volume polynomial")
 
-#sos_bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=2, bound_type=Upper)
-#
-#println("Created sos bound polynomial")
+sos_bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=2, bound_type=Upper)
 
-ia_bound_poly = create_basic_intarith_bound_poly(nxt_coeff, t, order, bound_type=Upper)
+println("Created sos bound polynomial")
+
+#ia_bound_poly = create_basic_intarith_bound_poly(nxt_coeff, t, order, bound_type=Upper)
 
 println("Created interval arithmetic bound polynomial")
 
