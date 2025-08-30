@@ -22,12 +22,15 @@ function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle,
 end
 
 # Compute final overapproximating hyperrectangle
-function compute_final_hyperrectangle(sol::RA.ReachSolution)
-    final_set = sol[end]
-    return RA.set(RA.overapproximate(final_set, Hyperrectangle))
+function compute_hyperrectangle(sol::RA.ReachSolution, idx::Int)
+    return RA.set(RA.overapproximate(sol[idx], Hyperrectangle))
 end
 
-function propagate_set(model::SystemModel; init_set::Hyperrectangle, duration::Float64)
-    sol = compute_taylor_reach_sets(model; init_set=init_set, duration=duration)
-    return compute_final_hyperrectangle(sol)
+function compute_hyperrectangle(reach_set::RA.AbstractReachSet, idx::Int)
+    return RA.set(RA.overapproximate(reach_set, Hyperrectangle))
 end
+
+#function propagate_set(model::SystemModel; init_set::Hyperrectangle, duration::Float64)
+#    sol = compute_taylor_reach_sets(model; init_set=init_set, duration=duration)
+#    return compute_final_hyperrectangle(sol)
+#end

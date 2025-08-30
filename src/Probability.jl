@@ -3,8 +3,7 @@ function density(x_eval::Vector{Float64}, t_eval::Float64, vol_poly::SpatioTempo
 end
 
 function probability(region::Hyperrectangle{Float64}, t::Float64, vol_poly::SpatioTemporalPoly)
-    integ_coeffs = [integrate(coeff, region) for coeff in vol_poly.spatio_coeffs]
-    integ_poly = TemporalPoly(vol_poly.t_deg, integ_coeffs .* vol_poly.t_coeffs)
+    integ_poly = create_integ_poly(vol_poly, region)
     return integ_poly(t)
 end
 

@@ -178,6 +178,16 @@ function lower_bound(p::BernsteinPolynomial{T, D}) where {T, D}
     return minimum(p.coeffs)
 end
 
+function upper_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
+    p_tf = affine_transform(p, region)
+    return upper_bounds(p_tf)
+end
+
+function lower_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
+    p_tf = affine_transform(p, region)
+    return lower_bound(p_tf)
+end
+
 function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
     current_coeffs = copy(p.coeffs)
     
@@ -189,14 +199,10 @@ function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{F
         a = mins[d]
         b = maxes[d]
         
-        # Basic validation
         if !(0.0 <= a <= b <= 1.0)
             error("Region must be a valid sub-rectangle of [0,1]^D. Dimension $d has invalid interval [$a, $b].")
         end
         
-        # --- FIX ---
-        # Use mapslices to apply the 1D transform to each 1D slice along dimension `d`.
-        # This works correctly for any D.
         current_coeffs = mapslices(c -> _transform_1d(c, a, b), current_coeffs, dims=d)
     end
     
@@ -281,21 +287,15 @@ function _transform_1d(coeffs_in::AbstractVector, a::Float64, b::Float64)
         return copy(coeffs_in)
     end
     
-    # Trivial case: the region is the original [0,1] interval.
     if a ≈ 0.0 && b ≈ 1.0
         return copy(coeffs_in)
     end
 
-    # Degenerate case: the region is a single point.
-    # The new polynomial is constant, with all coefficients equal to P(a).
     if a ≈ b
         val = _evaluate_1d(coeffs_in, a)
         return fill(val, n + 1)
     end
 
-    # --- Step 1: Subdivide at `b` to get coefficients for the domain [0, b] ---
-    # The control points for the first segment of a subdivision are given by the
-    # first column of the de Casteljau tableau.
     temp_coeffs = copy(coeffs_in)
     intermediate_coeffs = similar(temp_coeffs)
     
@@ -307,13 +307,9 @@ function _transform_1d(coeffs_in::AbstractVector, a::Float64, b::Float64)
         end
     end
     
-    # --- Step 2: Subdivide the new curve (on [0,b]) at t=a/b and take the second segment ---
-    # The control points for the second segment of a subdivision are the right
-    # diagonal of the de Casteljau tableau. This can be computed efficiently.
     t = a / b
     final_coeffs = similar(intermediate_coeffs)
     
-    # We copy the intermediate coefficients and modify them in-place
     current_coeffs = copy(intermediate_coeffs)
     
     for k in 0:n

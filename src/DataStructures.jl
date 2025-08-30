@@ -1,3 +1,5 @@
+import Base: +, -
+
 struct SystemModel{P}
     f::Vector{P}
 end
@@ -33,6 +35,22 @@ function (tp::TemporalPoly)(t::Float64)
         log_vals = log_coeff_vals .+ log_t_monom_vals 
 
         return sum(exp.(log_vals))
+    end
+end
+
+function +(p::TemporalPoly, q::TemporalPoly)
+    if p.t_deg >= q.t_deg 
+        new_coeffs = copy(p.t_coeffs)
+        for i in 0:q.t_deg
+            new_coeffs[i + 1] += q.t_coeffs[i + 1]
+        end
+        return TemporalPoly(p.t_deg, new_coeffs)
+    else
+        new_coeffs = copy(q.t_coeffs)
+        for i in 0:p.t_deg
+            new_coeffs[i + 1] += p.t_coeffs[i + 1]
+        end
+        return TemporalPoly(q.t_deg, new_coeffs)
     end
 end
 
