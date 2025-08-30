@@ -12,10 +12,8 @@ function (ts::TaylorSpline)(t::Float64)
     # Find the segment that contains the time t
     segment_time_end = 0.0
     for segment in ts.segments
-        #println(" time_sum: $time_sum, t: $t")
         segment_time_end += segment.duration
         if t <= segment_time_end
-            #println("computing volume at $(t - time_sum)")
             return segment.volume_function(t - segment_time_end + segment.duration)
         end
     end

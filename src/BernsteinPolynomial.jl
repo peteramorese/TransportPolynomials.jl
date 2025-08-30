@@ -1,5 +1,31 @@
+import Base: +, -, *
+
 struct BernsteinPolynomial{T, D}
     coeffs::AbstractArray{T, D}
+end
+
+function (p::BernsteinPolynomial{T, D})(x::AbstractMatrix{S}) where {T, S, D}
+    return decasteljau(p, x)
+end
+
+function +(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
+    return add(p, q)
+end
+
+function *(a::Number, p::BernsteinPolynomial{T, D}) where {T, D}
+    return BernsteinPolynomial{promote_type(T, typeof(a)), D}(a .* p.coeffs)
+end
+
+function *(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
+    return product(p, q)
+end
+
+function -(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
+    return add(p, -1 * q)
+end
+
+function -(p::BernsteinPolynomial{T, D}) where {T, D}
+    return -1 * p
 end
 
 function deg(p::BernsteinPolynomial{T, D}) where {T, D}
@@ -8,6 +34,21 @@ end
 
 function dimension(p::BernsteinPolynomial{T, D}) where {T, D}
     return D
+end
+
+function increase_degree(p::BernsteinPolynomial{T, D}, m::NTuple{D, Int}) where {T, D}
+    n = size(p.coeffs) .- 1
+    @assert all(m .>= n) "Target degrees must be ≥ current degrees"
+
+    coeffs = p.coeffs
+    for d in 1:D
+        coeffs = _elevate_along_dim(coeffs, n[d], m[d], d)
+    end
+    return BernsteinPolynomial{T,D}(coeffs)
+end
+
+function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractVector{S}) where {T, S, D}
+    return decasteljau(p, reshape(x, 1, :))
 end
 
 function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractMatrix{S}) where {T, S, D}
@@ -41,7 +82,7 @@ end
 function differentiate(p::BernsteinPolynomial{T, D}, diff_dim::Int) where {T, D}
     @assert 1 <= diff_dim <= D "Variable index ($diff_dim) out of bounds for polynomial of dimension $D."
 
-    n_i = size(coeffs, i) - 1
+    n_i = size(p.coeffs, diff_dim) - 1
     @assert n_i >= 0 "Cannot differentiate along dimension of size 0l"
 
     new_coeffs = n_i .* diff(p.coeffs, dims=i)
@@ -54,14 +95,10 @@ function integrate(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}
         throw(ArgumentError("Dimension of coefficient array ($D) does not match dimension of Hyperrectangle ($(LazySets.dim(region)))."))
     end
 
-    # --- 2. Get polynomial degrees and integration bounds ---
     degrees = size(p.coeffs) .- 1
     mins = low(region)
     maxes = high(region)
 
-    # --- 3. Compute 1D basis integrals for each dimension ---
-    # This creates a tuple of vectors. The i-th vector contains the definite
-    # integral of each 1D basis polynomial for that dimension.
     integral_vectors = ntuple(D) do i
         ni = degrees[i]
         ki_vec = 0:ni
@@ -74,29 +111,27 @@ function integrate(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}
         a = clamp(mins[i], 0.0, 1.0)
         b = clamp(maxes[i], 0.0, 1.0)
 
-        # Batch call to the incomplete beta function using broadcasting
-        #term_b, _ = beta_inc.(alpha, beta_p, b)
-        #term_a, _ = beta_inc.(alpha, beta_p, a)
         term_b = first.(beta_inc.(alpha, beta_p, b))
         term_a = first.(beta_inc.(alpha, beta_p, a))
 
         
-        # The integral of B_{ki,ni} over [a,b] is (I_b - I_a) / (ni + 1)
         return (term_b .- term_a) ./ (ni + 1.0)
     end
 
-    # --- 4. Compute multivariate basis integrals via outer product ---
-    # `Iterators.product` creates an iterator for the outer product.
-    # `prod(t)` calculates the product for each combination, yielding a
-    # D-dimensional array of the multivariate basis integrals.
     basis_integrals = [prod(t) for t in Iterators.product(integral_vectors...)]
 
-    # --- 5. Compute the final integral ---
-    # This is the sum of each coefficient multiplied by the integral of its
-    # corresponding basis function (i.e., a dot product).
-    println("bs int size: ", size(basis_integrals))
-    println("coeffs size: ", size(p.coeffs))
     return sum(p.coeffs .* basis_integrals)
+end
+
+function add(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
+    if size(p.coeffs) == size(q.coeffs)
+        return BernsteinPolynomial{T, D}(p.coeffs .+ q.coeffs)
+    else
+        m = max.(size(p.coeffs), size(q.coeffs)) .- 1
+        p_incr = increase_degree(p, m)
+        q_incr = increase_degree(q, m)
+        return BernsteinPolynomial{T, D}(p_incr.coeffs .+ q_incr.coeffs)
+    end
 end
 
 function product(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
@@ -109,16 +144,16 @@ function product(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) whe
     outsz = n .+ m .+ 1
 
     # Work in a floating type to avoid integer overflow in binomials
-    Twork = Float64
+    work_t = Float64
 
     # Build per-dimension binomial weight arrays
-    Wn  = _binomial_weight_array(n,  Twork)        # shape (n.+1)
-    Wm  = _binomial_weight_array(m,  Twork)        # shape (m.+1)
-    Wnm = _binomial_weight_array(n .+ m, Twork)    # shape (outsz)
+    Wn  = _binomial_weight_array(n,  work_t)        # shape (n.+1)
+    Wm  = _binomial_weight_array(m,  work_t)        # shape (m.+1)
+    Wnm = _binomial_weight_array(n .+ m, work_t)    # shape (outsz)
 
     # 1) Scale inputs by their binomial weights
-    A = Twork.(p.coeffs) .* Wn
-    B = Twork.(q.coeffs) .* Wm
+    A = work_t.(p.coeffs) .* Wn
+    B = work_t.(q.coeffs) .* Wm
 
     # 2) Zero-pad to the full linear-convolution size and FFT-multiply
     Ap = _pad_to(A, outsz)
@@ -132,10 +167,70 @@ function product(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) whe
     C = Cscaled ./ Wnm
 
     # Return a polynomial of degree n+m
-    return BernsteinPolynomial{Twork,D}(C)
+    return BernsteinPolynomial{work_t,D}(C)
 end
 
-# --- helpers ---
+function upper_bound(p::BernsteinPolynomial{T, D}) where {T, D}
+    return maximum(p.coeffs)
+end
+
+function lower_bound(p::BernsteinPolynomial{T, D}) where {T, D}
+    return minimum(p.coeffs)
+end
+
+function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
+    current_coeffs = copy(p.coeffs)
+    
+    mins = low(region)
+    maxes = high(region)
+    
+    # Apply the 1D transformation along each dimension
+    for d in 1:D
+        a = mins[d]
+        b = maxes[d]
+        
+        # Basic validation
+        if !(0.0 <= a <= b <= 1.0)
+            error("Region must be a valid sub-rectangle of [0,1]^D. Dimension $d has invalid interval [$a, $b].")
+        end
+        
+        # --- FIX ---
+        # Use mapslices to apply the 1D transform to each 1D slice along dimension `d`.
+        # This works correctly for any D.
+        current_coeffs = mapslices(c -> _transform_1d(c, a, b), current_coeffs, dims=d)
+    end
+    
+    return BernsteinPolynomial(current_coeffs)
+end
+
+##### --- helpers --- #####
+
+function _elevate_along_dim(coeffs::Array{T,D}, n::Int, m::Int, dim::Int) where {T,D}
+    if m == n
+        return coeffs
+    end
+
+    sz_old = size(coeffs)
+    sz_new = Base.setindex(sz_old, m+1, dim)   # replace size along axis `dim`
+    new_coeffs = zeros(T, sz_new)
+
+    # Precompute binomial ratios for speed
+    for j in 0:m
+        jmin = max(0, j-(m-n))
+        jmax = min(j, n)
+        for i in jmin:jmax
+            factor = binomial(n,i) * binomial(m-n, j-i) / binomial(m,j)
+
+            # Build indices for slicing assignment
+            inds_old = ntuple(k -> k == dim ? i+1 : (1:sz_old[k]), D)
+            inds_new = ntuple(k -> k == dim ? j+1 : (1:sz_new[k]), D)
+
+            # Broadcast add factor * coeffs[i,...] into new_coeffs[j,...]
+            new_coeffs[inds_new...] .+= factor .* coeffs[inds_old...]
+        end
+    end
+    return new_coeffs
+end
 
 function _binomial_weight_array(n::NTuple{D,Int}, ::Type{T}) where {D,T}
     sz = n .+ 1
@@ -155,20 +250,78 @@ function _pad_to(A::AbstractArray{T,D}, target::NTuple{D,Int}) where {T,D}
     return P
 end
 
-#function antidifferentiate(p::BernsteinPolynomial{T, D}, integ_dim::Int) where {T, D}
-#   # Validate that the dimension `i` is within the bounds of the array dimensions
-#    if !(1 <= i <= D)
-#        throw(ArgumentError("Dimension i must be between 1 and D (got i=$i, D=$D)"))
-#    end
-#
-#    new_degree = size(coeffs, i)
-#
-#    integrated_part = cumsum(coeffs; dims=i) ./ new_degree
-#
-#    zero_slice_size = collect(size(coeffs))
-#    zero_slice_size[i] = 1
-#    
-#    zero_coeffs = zeros(T, Tuple(zero_slice_size))
-#
-#    return cat(zero_coeffs, zero_coeffs .+ integrated_part; dims=i)
-#end
+function _evaluate_1d(coeffs::AbstractVector{T}, t::Float64) where T
+    n = length(coeffs) - 1
+    if n < 0
+        # This case handles a 0-dimensional array, which has one element.
+        return length(coeffs) == 1 ? coeffs[1] : zero(T)
+    end
+    
+    # Use a temporary buffer to avoid allocations
+    buffer = copy(coeffs)
+    
+    for r in 1:n
+        for i in 1:(n - r + 1)
+            buffer[i] = (1 - t) * buffer[i] + t * buffer[i+1]
+        end
+    end
+    return buffer[1]
+end
+
+
+"""
+_transform_1d(coeffs, a, b)
+
+Applies the affine transformation to a 1D coefficient vector, effectively
+remapping the polynomial from the interval [0,1] to the sub-interval [a,b].
+"""
+function _transform_1d(coeffs_in::AbstractVector, a::Float64, b::Float64)
+    n = length(coeffs_in) - 1
+    if n < 0
+        return copy(coeffs_in)
+    end
+    
+    # Trivial case: the region is the original [0,1] interval.
+    if a ≈ 0.0 && b ≈ 1.0
+        return copy(coeffs_in)
+    end
+
+    # Degenerate case: the region is a single point.
+    # The new polynomial is constant, with all coefficients equal to P(a).
+    if a ≈ b
+        val = _evaluate_1d(coeffs_in, a)
+        return fill(val, n + 1)
+    end
+
+    # --- Step 1: Subdivide at `b` to get coefficients for the domain [0, b] ---
+    # The control points for the first segment of a subdivision are given by the
+    # first column of the de Casteljau tableau.
+    temp_coeffs = copy(coeffs_in)
+    intermediate_coeffs = similar(temp_coeffs)
+    
+    for k in 1:(n + 1)
+        intermediate_coeffs[k] = temp_coeffs[1]
+        # This inner loop computes the next row of the de Casteljau tableau
+        for i in 1:(n - k + 1)
+            temp_coeffs[i] = (1 - b) * temp_coeffs[i] + b * temp_coeffs[i+1]
+        end
+    end
+    
+    # --- Step 2: Subdivide the new curve (on [0,b]) at t=a/b and take the second segment ---
+    # The control points for the second segment of a subdivision are the right
+    # diagonal of the de Casteljau tableau. This can be computed efficiently.
+    t = a / b
+    final_coeffs = similar(intermediate_coeffs)
+    
+    # We copy the intermediate coefficients and modify them in-place
+    current_coeffs = copy(intermediate_coeffs)
+    
+    for k in 0:n
+        final_coeffs[n - k + 1] = current_coeffs[n - k + 1]
+        for i in 1:(n - k)
+            current_coeffs[i] = (1 - t) * current_coeffs[i] + t * current_coeffs[i+1]
+        end
+    end
+    
+    return final_coeffs
+end

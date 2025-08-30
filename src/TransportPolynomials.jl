@@ -21,20 +21,20 @@ using FFTW
 
 import ReachabilityAnalysis as RA 
 
+include("BernsteinPolynomial.jl")
 include("DataStructures.jl")
-include("Visualizaton.jl")
-include("SystemRegression.jl")
-include("PolynomialBounds.jl")
+#include("Visualizaton.jl")
+#include("SystemRegression.jl")
+#include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
-include("BoundedVolumePolynomial.jl")
+#include("BoundedVolumePolynomial.jl")
 include("Probability.jl")
-include("PicardIteration.jl")
+#include("PicardIteration.jl")
 include("ReachableSets.jl")
 include("TaylorSpline.jl")
-include("BernsteinPolynomial.jl")
 
 # DataStructures
-export SystemModel, SpatioTemporalPoly, SpatioTemporalPolyVector, TemporalPoly
+export SystemModel, dimension, SpatioTemporalPoly
 
 # Visualization
 export plot_data, plot_polynomial_surface, plot_2D_pdf, 
@@ -43,15 +43,10 @@ export plot_data, plot_polynomial_surface, plot_2D_pdf,
     plot_euler_mc_prob_vs_time, plot_2D_reachable_sets
 
 # VolumePolynomial
-export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff, 
-    create_integrator_poly, create_basic_sos_bound_poly, create_basic_intarith_bound_poly, evaluate_integral, 
-    density, euler_density, probability, mc_euler_probability
-
-# BoundedVolumePolynomial
-export TensorErrorVariables, create_tensor_error_variables
+export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff 
 
 # Probability
-export density, probability, evaluate_integral, propagate_sample, euler_density, mc_euler_probability
+export density, probability, propagate_sample, euler_density, mc_euler_probability
 
 # PolynomialBounds
 export BouldType, Upper, Lower, Magnitude
@@ -67,6 +62,6 @@ export compute_taylor_reach_sets, compute_final_hyperrectangle
 export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_continuous_taylor_spline 
 
 # BernsteinPolynomial
-export BernsteinPolynomial, degree, dimension, decasteljau, differentiate, integrate, product
+export BernsteinPolynomial, deg, dimension, decasteljau, differentiate, integrate, product, increase_degree, add, add!, affine_transform
 
 end

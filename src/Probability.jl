@@ -2,11 +2,10 @@ function density(x_eval::Vector{Float64}, t_eval::Float64, vol_poly::SpatioTempo
     return vol_poly(x_eval, t_eval)
 end
 
-function probability(region::Hyperrectangle{Float64}, t_eval::Float64, integ_poly::SpatioTemporalPoly)
-    function antideriv(x::Vector{Float64})
-        return integ_poly(x, t_eval)   
-    end
-    return evaluate_integral(antideriv, region)
+function probability(region::Hyperrectangle{Float64}, t::Float64, vol_poly::SpatioTemporalPoly)
+    integ_coeffs = [integrate(coeff, region) for coeff in vol_poly.spatio_coeffs]
+    integ_poly = TemporalPoly(vol_poly.t_deg, integ_coeffs .* vol_poly.t_coeffs)
+    return integ_poly(t)
 end
 
 function probability_and_ubound(region::Hyperrectangle{Float64}, t_eval::Float64, integ_poly::SpatioTemporalPoly, bound_poly::TemporalPoly)
@@ -24,21 +23,6 @@ function probability_and_geometric_ubound(region::Hyperrectangle{Float64}, t_eva
         bound = 1.0
     end
     return prob, bound
-end
-
-function evaluate_integral(antideriv, region::Hyperrectangle{Float64})
-    center = region.center
-    radius = region.radius
-
-    n = length(center)
-    integral = 0.0
-    for bits in Iterators.product((0:1 for _ in 1:n)...)
-        vertex = [center[i] + (2*bits[i]-1)*radius[i] for i in 1:n]
-        sign = (-1)^sum(bits)
-        integral += sign * antideriv(vertex)
-    end
-
-    return integral
 end
 
 function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
