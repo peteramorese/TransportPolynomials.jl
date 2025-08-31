@@ -36,14 +36,29 @@ vp_deg = 3
 
 erf_space_region = Hyperrectangle(low=[0.3, .2], high=[0.4, 0.3])
 
-#duration = 10.5
-duration = 5.5
+duration = 10.5
+#duration = 5.5
 
 flow_pipe = compute_taylor_reach_sets(mvp_model; init_set=erf_space_region, duration=duration)
 
 
 ts = create_box_taylor_spline(flow_pipe, model, vp_deg)
 tamed_ts = create_tamed_taylor_spline(flow_pipe, model, vp_deg)
+
+function get_seg_t(n)
+    t_seg = 0.0
+    for i in 1:n
+        t_seg += ts.segments[i].duration
+    end
+    return t_seg
+end
+
+t_seg = get_seg_t(1)
+println("t seg: ", t_seg)
+t_b4 = t_seg - 0.001
+t_af = t_seg + 0.001
+println("tamed ts b4: ", tamed_ts(t_b4))
+println("tamed ts af: ", tamed_ts(t_af))
 
 # Plot the flowpipe
 plt_fp = plot(flow_pipe, vars=(1,2))
@@ -68,10 +83,4 @@ plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
 plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
 
 
-#plot!(plt_vp_prob, title="Probability vs. time for region")
-
 plot(plt_fp, plt_boxes, plt_vp_prob, layout=(1,3), size=(1200, 400))
-
-#display(plt_fp)
-#display(plt_vp_prob)
-#display(plt_boxes)

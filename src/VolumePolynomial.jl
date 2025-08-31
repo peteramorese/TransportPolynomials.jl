@@ -15,7 +15,7 @@ function compute_coefficients(model::SystemModel{BernsteinPolynomial{T, D}}, deg
     coefficients = Vector{BernsteinPolynomial{T, D}}()
     push!(coefficients, Φ_i)
     for i in 1:degree
-        Φ_ip1 = reynolds_operator(Φ_i, -model.f)
+        Φ_ip1 = reynolds_operator(Φ_i, model.f)
         Φ_i = Φ_ip1
         push!(coefficients, Φ_i)
     end
@@ -48,7 +48,6 @@ end
 
 function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
     ub = upper_bound(next_coeff, region)
-    println("UPPER VBOUND: ", ub)
     bound_poly_coeffs = zeros(Float64, degree + 2) # Add one since the bound poly is degree + 1
     bound_poly_coeffs[end] = ub / factorial(degree + 1)
     return TemporalPoly(degree + 1, bound_poly_coeffs)

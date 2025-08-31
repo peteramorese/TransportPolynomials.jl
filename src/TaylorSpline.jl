@@ -13,7 +13,9 @@ function (ts::TaylorSpline)(t::Float64)
     segment_time_end = 0.0
     for segment in ts.segments
         segment_time_end += segment.duration
-        if t <= segment_time_end
+        if t < segment_time_end
+            #println("  seg coeffs: ", segment.volume_function.coeffs)
+            #println("input dur: ", t - segment_time_end + segment.duration, " output: ", segment.volume_function(t - segment_time_end + segment.duration))
             return segment.volume_function(t - segment_time_end + segment.duration)
         end
     end
@@ -54,7 +56,7 @@ function create_tamed_taylor_spline(flow_pipe::RA.AbstractFlowpipe, model::Syste
 
     if !rebound_each_segment
         bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff) 
-        coefficient_bounds = [lower_bound(coeff) for coeff in vol_poly.spatio_coeffs]
+        roc_infemums = [lower_bound(coeff) for coeff in vol_poly.spatio_coeffs]
     end
 
     n_segments = length(flow_pipe)
@@ -69,53 +71,64 @@ function create_tamed_taylor_spline(flow_pipe::RA.AbstractFlowpipe, model::Syste
 
         println("Creating segment $k of $n_segments with duration $segment_duration")
 
-        integ_poly = create_integ_poly(vol_poly, R)
+        #integ_poly = create_integ_poly(vol_poly, R)
+
+        # Calculate the volume rates of change over R
+        roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
 
         if rebound_each_segment
             bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, R) 
-            coefficient_infemums = [lower_bound(coeff, R) for coeff in vol_poly.spatio_coeffs]
+            roc_infemums = [lower_bound(coeff, R) for coeff in vol_poly.spatio_coeffs]
         end
 
-        volume_function = integ_poly + bound_poly
-        println("integ poly coeffs: ", integ_poly.coeffs)
+        #volume_function = integ_poly + bound_poly
+        #println("integ poly coeffs: ", integ_poly.coeffs)
+        #println("ROC: ", roc)
         
-        # (upper bound) prediction of Ω volume using the previous volume function
-        pred_Ω_volume = prev_vf(segment_duration)
-        println("pred Ω volume: ", pred_Ω_volume)
-        # vol(R) - vol(Ω_pred)
+        # (upper bound) prediction of Ω volume using the previous volume function and the end of its duration
         if k > 1
+            pred_Ω_volume = prev_vf(segments[end].duration)
             pred_volume_diff = volume(R) - pred_Ω_volume 
         else
+            pred_Ω_volume = Inf
             pred_volume_diff = 0.0
         end
+        #println("  prev vf coeffs: ", prev_vf.coeffs)
+        #println("pred Ω volume: ", pred_Ω_volume, " predicted at dur=", segment_duration)
+        # vol(R) - vol(Ω_pred)
         # Worst case difference between integral of coefficients over R vs Ω_pred
-        println("Coefficient infemums: ", coefficient_infemums)
-        worst_case_integ_diff = pred_volume_diff * coefficient_infemums
+        #println("ROC infemums: ", roc_infemums)
+        worst_case_roc_diff = pred_volume_diff * roc_infemums
 
-        println("worst case integ diff: ", worst_case_integ_diff)
-        adjusted_vf_coeffs = integ_poly.coeffs .- worst_case_integ_diff
+        #println("worst case integ diff: ", worst_case_roc_diff)
+        adjusted_roc = roc .- worst_case_roc_diff
+        #adjusted_vf_coeffs = integ_poly.coeffs .- worst_case_integ_diff
 
         predictors = [prev_vf]
-        pred_Ω_int_coeffs = [pred_Ω_volume]
+        pred_roc = [pred_Ω_volume]
         for _ in 1:vol_poly_degree 
             push!(predictors, differentiate(predictors[end]))
-            push!(pred_Ω_int_coeffs, predictors[end](segment_duration))
+            push!(pred_roc, predictors[end](segment_duration))
         end
 
-        println("pred Ω int coeffs: ",pred_Ω_int_coeffs)
-        println("prev coeffs: ", prev_vf.coeffs)
-        println("adj VF coeffs: ", adjusted_vf_coeffs)
+        #println("pred roc: ",pred_roc)
+        #println("adj roc: ", adjusted_roc)
         #println("pred coeffs: ", pred_coeffs)
-        println()
 
         # Compute the current volume function coefficients at the end of time time span
 
-        tamed_volume_function_coeffs = min.(adjusted_vf_coeffs, pred_Ω_int_coeffs)
+        tamed_roc = min.(adjusted_roc, pred_roc)
         #tamed_volume_function = TemporalPoly(volume_function.deg, tamed_volume_function_coeffs)
-        tamed_volume_function = TemporalPoly(vol_poly_degree, tamed_volume_function_coeffs) + bound_poly
+        taylor_scales = [1/factorial(i) for i in 0:vol_poly_degree]
+        tamed_vf_coeffs = tamed_roc .* taylor_scales
+        tamed_volume_function = TemporalPoly(vol_poly_degree, tamed_vf_coeffs) + bound_poly
+        #println("SEGMENT ", k, " tamed vf coeffs: ", tamed_volume_function.coeffs)
         prev_vf = tamed_volume_function
 
-        push!(segments, TaylorSplineSegment{TemporalPoly}(R, segment_duration, tamed_volume_function))
+        #println()
+
+        tamed_volume_function_cpy = TemporalPoly(tamed_volume_function.deg, copy(tamed_volume_function.coeffs))
+        push!(segments, TaylorSplineSegment{TemporalPoly}(R, segment_duration, tamed_volume_function_cpy))
     end
     return TaylorSpline{TemporalPoly}(segments)
 end
