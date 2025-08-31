@@ -4,9 +4,9 @@ function divergence(p_vec::Vector{BernsteinPolynomial{T, D}}) where {T, D}
     return reduce(add, diffs)
 end
 
-function reynolds_operator(Φ::AbstractPolynomialLike, v::Vector{BernsteinPolynomial{T, D}}) where {T, D}
-    Φ_scaled_field = Φ .* v
-    #Φ_scaled_field = [product(Φ, vi) for vi in v]
+function reynolds_operator(Φ::BernsteinPolynomial{T,D}, v::Vector{BernsteinPolynomial{T, D}}) where {T, D}
+    #Φ_scaled_field = Φ .* v
+    Φ_scaled_field = [Φ*vi for vi in v]
     return divergence(Φ_scaled_field)
 end
 

@@ -23,7 +23,7 @@ import ReachabilityAnalysis as RA
 
 include("BernsteinPolynomial.jl")
 include("DataStructures.jl")
-#include("Visualizaton.jl")
+include("Visualizaton.jl")
 #include("SystemRegression.jl")
 #include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
@@ -35,6 +35,9 @@ include("TaylorSpline.jl")
 
 # DataStructures
 export SystemModel, dimension, SpatioTemporalPoly
+
+# BernsteinPolynomial
+export BernsteinPolynomial, deg, dimension, decasteljau, differentiate, integrate, product, increase_degree, add, add!, affine_transform, upper_bound, lower_bound, to_mv_polynomial
 
 # Visualization
 export plot_data, plot_polynomial_surface, plot_2D_pdf, 
@@ -56,12 +59,10 @@ export sos_bound, dsos_bound, intarith_bound, coeff_sos_bound, coeff_intarith_bo
 export picard_operator, picard_vol_poly
 
 # ReachableSets
-export compute_taylor_reach_sets, compute_final_hyperrectangle
+export compute_taylor_reach_sets, to_mv_polynomial_system, compute_hyperrectangle
 
 # TaylorSpline
-export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_continuous_taylor_spline 
+export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_tamed_taylor_spline 
 
-# BernsteinPolynomial
-export BernsteinPolynomial, deg, dimension, decasteljau, differentiate, integrate, product, increase_degree, add, add!, affine_transform
 
 end

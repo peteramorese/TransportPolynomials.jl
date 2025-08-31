@@ -20,37 +20,37 @@ function dimension(model::SystemModel)
 end
 
 struct TemporalPoly
-    t_deg::Int
-    t_coeffs::Vector{Float64}
+    deg::Int
+    coeffs::Vector{Float64}
 end
 
 function (tp::TemporalPoly)(t::Float64)
     @assert t >= 0.0 "Time input must be non-negative"
     if t == 0.0
-        return tp.t_coeffs[1]
+        return tp.coeffs[1]
     else
         log_t = log(t)
-        log_t_monom_vals = [i * log_t + stp.t_coeffs[i + 1] for i in 0:stp.t_deg]
+        log_t_monom_vals = [i * log_t + tp.coeffs[i + 1] for i in 0:tp.deg]
 
-        log_vals = log_coeff_vals .+ log_t_monom_vals 
+        log_vals = log.(tp.coeffs) .+ log_t_monom_vals 
 
         return sum(exp.(log_vals))
     end
 end
 
 function +(p::TemporalPoly, q::TemporalPoly)
-    if p.t_deg >= q.t_deg 
-        new_coeffs = copy(p.t_coeffs)
-        for i in 0:q.t_deg
-            new_coeffs[i + 1] += q.t_coeffs[i + 1]
+    if p.deg >= q.deg 
+        new_coeffs = copy(p.coeffs)
+        for i in 0:q.deg
+            new_coeffs[i + 1] += q.coeffs[i + 1]
         end
-        return TemporalPoly(p.t_deg, new_coeffs)
+        return TemporalPoly(p.deg, new_coeffs)
     else
-        new_coeffs = copy(q.t_coeffs)
-        for i in 0:p.t_deg
-            new_coeffs[i + 1] += p.t_coeffs[i + 1]
+        new_coeffs = copy(q.coeffs)
+        for i in 0:p.deg
+            new_coeffs[i + 1] += p.coeffs[i + 1]
         end
-        return TemporalPoly(q.t_deg, new_coeffs)
+        return TemporalPoly(q.deg, new_coeffs)
     end
 end
 

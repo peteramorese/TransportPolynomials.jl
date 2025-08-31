@@ -1,5 +1,5 @@
 struct TaylorSplineSegment{F}
-    Ω_bounding_box::Hyperrectangle{Float64} # Current bounding box for the region
+    Ω_bounding_box::Hyperrectangle # Current bounding box for the region
     duration::Float64                       # Time duration of the segment
     volume_function::F                      # Upper bound of the volume function for the segement 
 end
@@ -21,7 +21,7 @@ function (ts::TaylorSpline)(t::Float64)
     #error("Time $t exceeds the total duration of the Taylor spline.")
 end
 
-function create_box_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemModel, vol_poly_degree::Int, init_set::Hyperrectangle{Float64}, rebound_each_segment::Bool=true)
+function create_box_taylor_spline(flow_pipe::RA.AbstractFlowpipe, model::SystemModel, vol_poly_degree::Int, rebound_each_segment::Bool=true)
     vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, vol_poly_degree)
 
     if !rebound_each_segment
@@ -32,7 +32,7 @@ function create_box_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemMode
     segments = []
 
     for (k, reach_set) in enumerate(flow_pipe)
-        segment_duration = reach_set.tspan
+        segment_duration = RA.tend(reach_set) - RA.tstart(reach_set)
         Ω_bounding_box = compute_hyperrectangle(flow_pipe, k)
 
         println("Creating segment $k of $n_segments with duration $segment_duration")
@@ -49,7 +49,7 @@ function create_box_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemMode
     return TaylorSpline{TemporalPoly}(segments)
 end
 
-function create_tamed_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemModel, vol_poly_degree::Int, init_set::Hyperrectangle{Float64}, rebound_each_segment::Bool=true)
+function create_tamed_taylor_spline(flow_pipe::RA.AbstractFlowpipe, model::SystemModel, vol_poly_degree::Int, rebound_each_segment::Bool=true)
     vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, vol_poly_degree)
 
     if !rebound_each_segment
@@ -62,8 +62,8 @@ function create_tamed_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemMo
     vf_coeffs = [Inf for _ in 1:(vol_poly_degree + 2)]
 
     for (k, reach_set) in enumerate(flow_pipe)
-        segment_duration = reach_set.tspan
-        Ω_curr_bounding_box = compute_hyperrectangle(flow_pipe, k)
+        segment_duration = RA.tend(reach_set) - RA.tstart(reach_set)
+        Ω_bounding_box = compute_hyperrectangle(flow_pipe, k)
 
         println("Creating segment $k of $n_segments with duration $segment_duration")
 
@@ -75,7 +75,7 @@ function create_tamed_taylor_spline(flow_pipe::RA.ReachSolution, model::SystemMo
 
         volume_function = integ_poly + bound_poly
         tamed_volume_function_coeffs = min.(vf_coeffs, volume_function.coeffs)
-        tamed_volume_function = TemporalPoly(volume_function.t_deg, tamed_volume_function_coeffs)
+        tamed_volume_function = TemporalPoly(volume_function.deg, tamed_volume_function_coeffs)
 
         push!(segments, TaylorSplineSegment{TemporalPoly}(Ω_bounding_box, segment_duration, tamed_volume_function))
     end

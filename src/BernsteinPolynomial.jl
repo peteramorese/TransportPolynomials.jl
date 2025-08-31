@@ -79,13 +79,39 @@ function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractMatrix{S}) where {
     return vec(current_coeffs)
 end
 
+function abstract_decasteljau(p::BernsteinPolynomial{T, D}, x) where {T, D}
+
+    current_coeffs = Array{T, D + 1}(undef, size(p.coeffs)...)
+    for i in 1:m
+        current_coeffs[i, ntuple(_ -> Colon(), D)...] = p.coeffs
+    end
+
+    for i in 1:D
+        t = view(x, :, i)
+        t_reshaped = reshape(t, (m, ntuple(_ -> 1, D - i + 1)...))
+        degree = size(current_coeffs, 2) - 1
+
+        for _ in 1:degree
+            c1 = selectdim(current_coeffs, 2, 1:size(current_coeffs, 2) - 1)
+            c2 = selectdim(current_coeffs, 2, 2:size(current_coeffs, 2))
+            current_coeffs = @. (1 - t_reshaped) * c1 + t_reshaped * c2
+        end
+
+        if i < D
+            current_coeffs = dropdims(current_coeffs, dims=2)
+        end
+    end
+
+    return vec(current_coeffs)
+end
+
 function differentiate(p::BernsteinPolynomial{T, D}, diff_dim::Int) where {T, D}
     @assert 1 <= diff_dim <= D "Variable index ($diff_dim) out of bounds for polynomial of dimension $D."
 
     n_i = size(p.coeffs, diff_dim) - 1
     @assert n_i >= 0 "Cannot differentiate along dimension of size 0l"
 
-    new_coeffs = n_i .* diff(p.coeffs, dims=i)
+    new_coeffs = n_i .* diff(p.coeffs, dims=diff_dim)
     return BernsteinPolynomial{T, D}(new_coeffs)
 end
 
@@ -180,7 +206,7 @@ end
 
 function upper_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
     p_tf = affine_transform(p, region)
-    return upper_bounds(p_tf)
+    return upper_bound(p_tf)
 end
 
 function lower_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
@@ -207,6 +233,50 @@ function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{F
     end
     
     return BernsteinPolynomial(current_coeffs)
+end
+
+function to_mv_polynomial(p::BernsteinPolynomial{T, D}, x_vars::Vector) where {T, D}
+    @assert length(x_vars) == D "Number of variables must match polynomial dimension."
+
+    degrees = size(p.coeffs) .- 1
+    poly = zero(T)*prod(x_vars)  # dummy init, becomes 0 polynomial
+
+    for I in CartesianIndices(p.coeffs)
+        coeff = p.coeffs[I]
+        if coeff == 0
+            continue
+        end
+        idxs = Tuple(I) .- 1   # multi-index (i₁,…,i_D)
+
+        # expand this tensor-product Bernstein basis element
+        terms = Dict{NTuple{D,Int},T}((ntuple(_->0,D)) => coeff)
+
+        for d in 1:D
+            i = idxs[d]
+            n = degrees[d]
+
+            new_terms = Dict{NTuple{D,Int},T}()
+            for (expvec, c) in terms
+                for k in 0:(n-i)
+                    exp_new = Base.setindex(expvec, expvec[d] + i + k, d)
+                    coeff_new = c * binomial(n,i) * binomial(n-i,k) * (-1)^k
+                    new_terms[exp_new] = get(new_terms, exp_new, zero(T)) + coeff_new
+                end
+            end
+            terms = new_terms
+        end
+
+        # accumulate into polynomial
+        for (expvec, c) in terms
+            mon = one(T)
+            for d in 1:D
+                mon *= x_vars[d]^expvec[d]
+            end
+            poly += c * mon
+        end
+    end
+
+    return poly
 end
 
 ##### --- helpers --- #####
