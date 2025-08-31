@@ -24,17 +24,14 @@ struct TemporalPoly
     coeffs::Vector{Float64}
 end
 
-function (tp::TemporalPoly)(t::Float64)
+function (p::TemporalPoly)(t::Float64)
     @assert t >= 0.0 "Time input must be non-negative"
     if t == 0.0
-        return tp.coeffs[1]
+        return p.coeffs[1]
     else
-        log_t = log(t)
-        log_t_monom_vals = [i * log_t + tp.coeffs[i + 1] for i in 0:tp.deg]
+        t_monom_vals = [t^i * p.coeffs[i + 1] for i in 0:p.deg]
 
-        log_vals = log.(tp.coeffs) .+ log_t_monom_vals 
-
-        return sum(exp.(log_vals))
+        return sum(t_monom_vals)
     end
 end
 
@@ -51,6 +48,15 @@ function +(p::TemporalPoly, q::TemporalPoly)
             new_coeffs[i + 1] += p.coeffs[i + 1]
         end
         return TemporalPoly(q.deg, new_coeffs)
+    end
+end
+
+function differentiate(p::TemporalPoly)
+    if p.deg == 0
+        return TemporalPoly(0, [0.0])
+    else
+        new_coeffs = [i * p.coeffs[i + 1] for i in 1:p.deg]
+        return TemporalPoly(p.deg - 1, new_coeffs)
     end
 end
 

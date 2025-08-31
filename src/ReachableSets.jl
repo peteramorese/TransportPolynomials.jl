@@ -37,7 +37,6 @@ function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle,
     sol = RA.solve(prob; T=duration, alg=RA.TMJets(), verbose=false)
     println(" Done.")
 
-    #print(typeof(sol))
     return RA.flowpipe(sol)
 end
 

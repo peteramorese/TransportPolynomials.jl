@@ -48,6 +48,7 @@ end
 
 function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
     ub = upper_bound(next_coeff, region)
+    println("UPPER VBOUND: ", ub)
     bound_poly_coeffs = zeros(Float64, degree + 2) # Add one since the bound poly is degree + 1
     bound_poly_coeffs[end] = ub / factorial(degree + 1)
     return TemporalPoly(degree + 1, bound_poly_coeffs)
