@@ -1,53 +1,55 @@
 
 # Generate synthetic data
-function generate_data(f, d, n; domain_std=1.0, noise_std=0.1, seed=0)
+function generate_data(true_system::SystemModel, n; domain_std=1.0, noise_std=0.1, seed=0)
     Random.seed!(seed)
-    X = randn(n, d) .* domain_std
-    Y_clean = zeros(n, d)
-    for i in 1:n
-        Y_clean[i, :] = f(X[i, :])
+    D = dimension(true_system)
+    Sx = randn(n, D) .* domain_std
+    fx_clean = zeros(n, D)
+    fx_clean = true_system(X)
+    #for i in 1:n
+    #    Y_clean[i, :] = true_system(X[i, :])
+    #end
+    noise = randn(n, D) .* noise_std
+    fx_noisy = fx_clean + noise
+    return Sx, fx_noisy
+end
+
+function poly_regression(polyvars, S::Matrix{Float64}, f_hat_component::Vector{Float64}; degrees::Vector{Int})
+    n, D = size(S)
+    @assert length(f_hat) == n "Number of data in S and f_hat must match"
+
+    shape = tuple(degrees .+ 1)
+
+    n_basis_functions = prod(shape)
+
+    A = zeros(n, n_basis_functions)
+
+    log_S = log.(S)
+    log_1mS = log.(1 .- S)
+
+    wrap_i = 0
+    for I in CartesianIndices(shape)
+        log_basis = zeros(n)
+        for j in I
+            idx = j - 1
+            deg = degrees[j]
+
+            log_binom = lgamma(deg + 1) - lgamma(idx + 1) - lgamma(deg - idx + 1)
+            log_basis += log_binom .+ idx * log_S[:, j] .+ (deg - idx) * log_1mS[:, j]
+        end
+        A[:, i] = exp.(log_basis)
+        i += 1
     end
-    noise = randn(n, d) .* noise_std
-    Y = Y_clean + noise
-    return X, Y
-end
-
-# Gaussian CDF transform (erf-space)
-function erf_space_transform(x)
-    return cdf.(Normal(), x)
-end
-
-# Jacobian of the erf-space transform
-function erf_space_transform_jacobian(x)
-    return Diagonal(pdf.(Normal(), x))
-end
-
-function poly_regression(polyvars, X::Matrix{Float64}, y::Vector{Float64}; deg::Int=2)
-    n, d = size(X)
-
-    # Create symbolic variables x₁, x₂, ..., x_d
-
-    # Get all monomials up to total degree `deg`
-    mons = monomials(polyvars, 0:deg)
-
-    # Build the design matrix A (n × num_monomials)
-    A = zeros(n, length(mons))
-    for i in 1:n
-        xi = X[i, :]
-        subst = Dict(polyvars[j] => xi[j] for j in 1:d)
-        A[i, :] = [subs(m, subst...) for m in mons]
-    end
-
-    # Solve least squares to find coefficients
-    coeffs = A \ y
+        
+    # Least squares
+    coeffs = A \ f_hat
 
     # Form the polynomial from monomials and fitted coefficients
-    p = coeffs' * mons
-
-    return p
+    coeffs = reshape(coeffs, shape)
+    return BernsteinPolynomial{Float64, D}(coeffs)
 end
 
-function system_regression(X_u, Y_u, degree)
+function system_regression(S, Y_u, degree)
     @assert size(X_u) == size(Y_u)
 
     d = size(X_u, 2)

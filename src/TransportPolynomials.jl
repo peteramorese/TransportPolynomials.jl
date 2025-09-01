@@ -1,6 +1,7 @@
 module TransportPolynomials
 
 
+using StaticArrays
 using LazySets
 using IterTools
 using Distributions

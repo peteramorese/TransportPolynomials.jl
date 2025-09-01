@@ -11,9 +11,11 @@ function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle,
 
     function f!(dx, x, p, t)
         for i in 1:D
+            #dx[i] = model.f[i](x)
             dx[i] = model.f[i](x)
             #dx[i] = decasteljau(model.f[i], x)[1]
         end
+        #dx = decasteljau.(model.f, Ref(x))
         return dx
     end
 

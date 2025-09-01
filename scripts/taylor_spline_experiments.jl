@@ -29,8 +29,8 @@ f1 = BernsteinPolynomial{Float64, 2}(f1_coeffs)
 f2 = BernsteinPolynomial{Float64, 2}(f2_coeffs)
 model = SystemModel([f1, f2])
 
-@polyvar x[1:2]
-mvp_model = to_mv_polynomial_system(model, x)
+#@polyvar x[1:2]
+#mvp_model = to_mv_polynomial_system(model, x)
 
 vp_deg = 3
 
@@ -39,7 +39,9 @@ erf_space_region = Hyperrectangle(low=[0.3, .2], high=[0.4, 0.3])
 duration = 10.5
 #duration = 5.5
 
-flow_pipe = compute_taylor_reach_sets(mvp_model; init_set=erf_space_region, duration=duration)
+
+flow_pipe = compute_taylor_reach_sets(model; init_set=erf_space_region, duration=duration)
+#flow_pipe = compute_taylor_reach_sets(mvp_model; init_set=erf_space_region, duration=duration)
 
 
 ts = create_box_taylor_spline(flow_pipe, model, vp_deg)

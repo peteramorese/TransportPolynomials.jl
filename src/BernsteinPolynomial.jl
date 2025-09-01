@@ -4,7 +4,7 @@ struct BernsteinPolynomial{T, D}
     coeffs::AbstractArray{T, D}
 end
 
-function (p::BernsteinPolynomial{T, D})(x::AbstractMatrix{S}) where {T, S, D}
+function (p::BernsteinPolynomial{T, D})(x::Union{AbstractVector{S}, AbstractMatrix{S}}) where {T, S, D}
     return decasteljau(p, x)
 end
 
@@ -48,7 +48,7 @@ function increase_degree(p::BernsteinPolynomial{T, D}, m::NTuple{D, Int}) where 
 end
 
 function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractVector{S}) where {T, S, D}
-    return decasteljau(p, reshape(x, 1, :))
+    return decasteljau(p, reshape(x, 1, :))[1]
 end
 
 function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractMatrix{S}) where {T, S, D}
@@ -56,32 +56,6 @@ function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractMatrix{S}) where {
     @assert D == d_x "Dimension of coefficient tensor ($D) must match column count in x ($d_x)."
 
     current_coeffs = Array{promote_type(T, S), D + 1}(undef, m, size(p.coeffs)...)
-    for i in 1:m
-        current_coeffs[i, ntuple(_ -> Colon(), D)...] = p.coeffs
-    end
-
-    for i in 1:D
-        t = view(x, :, i)
-        t_reshaped = reshape(t, (m, ntuple(_ -> 1, D - i + 1)...))
-        degree = size(current_coeffs, 2) - 1
-
-        for _ in 1:degree
-            c1 = selectdim(current_coeffs, 2, 1:size(current_coeffs, 2) - 1)
-            c2 = selectdim(current_coeffs, 2, 2:size(current_coeffs, 2))
-            current_coeffs = @. (1 - t_reshaped) * c1 + t_reshaped * c2
-        end
-
-        if i < D
-            current_coeffs = dropdims(current_coeffs, dims=2)
-        end
-    end
-
-    return vec(current_coeffs)
-end
-
-function abstract_decasteljau(p::BernsteinPolynomial{T, D}, x) where {T, D}
-
-    current_coeffs = Array{T, D + 1}(undef, size(p.coeffs)...)
     for i in 1:m
         current_coeffs[i, ntuple(_ -> Colon(), D)...] = p.coeffs
     end
