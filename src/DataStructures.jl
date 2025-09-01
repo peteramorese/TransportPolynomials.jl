@@ -5,12 +5,19 @@ struct SystemModel{P}
 end
 
 # Evaluate the polynomial vector field at the given point
+function (model::SystemModel{P})(x::AbstractVector{S}) where {P, S}
+    D = dimension(model)
+    @assert length(x) == D "Input x must have same dimension as model"
+    x_mat = reshape(x, 1, D)
+    return [f_i(x_mat) for f_i in model.f]
+end
+
 function (model::SystemModel{P})(x::AbstractMatrix{S}) where {P, S}
     D = dimension(model)
     @assert size(x, 2) == D "Input x must have same dimension as model"
     mat = Matrix{Float64}(undef, size(x, 1), D)
     for i in 1:D
-        mat[:, i] = model.f[i](x)
+        mat[:, i] = (model.f[i])(x)
     end
     return mat
 end

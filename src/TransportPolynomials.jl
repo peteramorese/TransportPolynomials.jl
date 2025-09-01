@@ -25,7 +25,8 @@ import ReachabilityAnalysis as RA
 include("BernsteinPolynomial.jl")
 include("DataStructures.jl")
 include("Visualizaton.jl")
-#include("SystemRegression.jl")
+include("DistributionTransform.jl")
+include("SystemRegression.jl")
 #include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
 #include("BoundedVolumePolynomial.jl")
@@ -45,6 +46,12 @@ export plot_data, plot_polynomial_surface, plot_2D_pdf,
     plot_2D_erf_space_pdf, plot_2D_region, plot_2D_region_in_3D, plot_2D_pdf, plot_2D_erf_space_vf,
     plot_vol_poly_density_vs_time, plot_euler_density_vs_time, plot_integ_poly_prob_vs_time,
     plot_euler_mc_prob_vs_time, plot_2D_reachable_sets
+
+# DistributionTransform
+export DistributionTransform, dimension, x_to_u, u_to_x, to_state_space_model, to_u_space_model
+
+# SystemRegression
+export generate_data, x_data_to_u_data, constrained_poly_regression, constrained_system_regression
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff 
