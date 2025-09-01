@@ -27,6 +27,7 @@ include("DataStructures.jl")
 include("Visualizaton.jl")
 include("DistributionTransform.jl")
 include("SystemRegression.jl")
+include("Systems.jl")
 #include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
 #include("BoundedVolumePolynomial.jl")
@@ -52,6 +53,9 @@ export DistributionTransform, dimension, x_to_u, u_to_x, to_state_space_model, t
 
 # SystemRegression
 export generate_data, x_data_to_u_data, constrained_poly_regression, constrained_system_regression
+
+# Systems
+export van_der_pol
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff 

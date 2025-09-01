@@ -1,6 +1,3 @@
-#function to_state_space_model(model::SystemModel{BernsteinPolynomial{T, D}}) where {T, D}
-#end
-
 function to_mv_polynomial_system(model::SystemModel{BernsteinPolynomial{T, D}}, x_vars::Vector) where {T, D}
     @assert length(x_vars) == dimension(model) "Number of variables must match polynomial dimension."
     mvp_f = to_mv_polynomial.(model.f, Ref(x_vars))
@@ -50,7 +47,7 @@ function compute_hyperrectangle(reach_set::RA.AbstractReachSet, idx::Int)
     return RA.set(RA.overapproximate(reach_set, Hyperrectangle))
 end
 
-#function propagate_set(model::SystemModel; init_set::Hyperrectangle, duration::Float64)
-#    sol = compute_taylor_reach_sets(model; init_set=init_set, duration=duration)
-#    return compute_final_hyperrectangle(sol)
-#end
+function x_flowpipe_to_u_flowpipe(dtf::DistributionTransform{DIST, D}, fp::RA.AbstractFlowpipe) where {DIST, D}
+    u_sets = [Rx_to_Ru(dtf, compute_hyperrectangle(fp, i)) for i in 1:length(fp)]
+    return RA.DiscreteFlowpipe(u_sets, fp.t_vec)
+end
