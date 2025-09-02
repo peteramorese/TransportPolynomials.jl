@@ -8,16 +8,17 @@ end
 function (model::SystemModel{P})(x::AbstractVector{S}) where {P, S}
     D = dimension(model)
     @assert length(x) == D "Input x must have same dimension as model"
-    x_mat = reshape(x, 1, D)
     return [f_i(x_mat) for f_i in model.f]
 end
 
 function (model::SystemModel{P})(x::AbstractMatrix{S}) where {P, S}
-    D = dimension(model)
-    @assert size(x, 2) == D "Input x must have same dimension as model"
-    mat = Matrix{Float64}(undef, size(x, 1), D)
+    n, D = size(x)
+    @assert dimension(model) == D "Input x must have same dimension as model"
+    mat = similar(x)
     for i in 1:D
-        mat[:, i] = (model.f[i])(x)
+        for j in 1:n
+            mat[j, i] = (model.f[i])(x[j, :])
+        end
     end
     return mat
 end
@@ -98,4 +99,10 @@ function (stp::SpatioTemporalPoly)(t::Float64, x::Vector{Float64})
 
         return sum(exp.(log_vals))
     end
+end
+
+struct FieldTemporalPoly{P}
+    spatio_vector_field_coeffs::Matrix{P}
+    t_deg::Int
+    t_coeffs::Vector{Float64}
 end

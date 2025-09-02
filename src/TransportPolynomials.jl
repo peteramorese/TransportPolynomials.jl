@@ -49,7 +49,7 @@ export plot_data, plot_polynomial_surface, plot_2D_pdf,
     plot_euler_mc_prob_vs_time, plot_2D_reachable_sets
 
 # DistributionTransform
-export DistributionTransform, dimension, x_to_u, u_to_x, to_state_space_model, to_u_space_model
+export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_state_space_model, to_u_space_model
 
 # SystemRegression
 export generate_data, x_data_to_u_data, constrained_poly_regression, constrained_system_regression
@@ -64,7 +64,7 @@ export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff
 export density, probability, propagate_sample, euler_density, mc_euler_probability
 
 # PolynomialBounds
-export BouldType, Upper, Lower, Magnitude
+export BoundType, Upper, Lower, Magnitude
 export sos_bound, dsos_bound, intarith_bound, coeff_sos_bound, coeff_intarith_bound
 
 # PicardIteration

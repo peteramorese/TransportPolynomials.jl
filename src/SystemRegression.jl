@@ -75,11 +75,15 @@ function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f
     return BernsteinPolynomial{Float64, D}(coeffs)
 end
 
-function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64}, degrees::Vector{Int})
+function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64}, degrees::Vector{Int}; reverse::Bool=false)
     n, D = size(U)
     @assert size(f_hat, 1) == n "Number of data in U and f_hat must match"
     @assert size(f_hat, 2) == D "Dimension of f_hat must match dimension of U"
     @assert length(degrees) == D "Length of degrees must match dimension of U"
+
+    if reverse
+        f_hat *= -1.0
+    end
 
     f_polys = Vector{BernsteinPolynomial{Float64, D}}(undef, D)
     for i in 1:D
