@@ -1,4 +1,4 @@
-import Base: +, -, *
+import Base: +, -, *, zero, one
 
 struct BernsteinPolynomial{T, D}
     coeffs::AbstractArray{T, D}
@@ -7,6 +7,9 @@ end
 function (p::BernsteinPolynomial{T, D})(x::Union{AbstractVector{S}, AbstractMatrix{S}}) where {T, S, D}
     return decasteljau(p, x)
 end
+
+zero(::BernsteinPolynomial{T, D}) = BernsteinPolynomial{T, D}(zeros(T, (1 for _ in 1:D)))
+one(::BernsteinPolynomial{T, D}) = BernsteinPolynomial{T, D}(ones(T, (1 for _ in 1:D)))
 
 function +(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
     return add(p, q)
