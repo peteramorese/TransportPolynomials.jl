@@ -25,14 +25,14 @@ plt_u_data = quiver(U[:, 1], U[:, 2], quiver=(fu_hat[:, 1], fu_hat[:, 2]), title
 plot(plt_x_data, plt_u_data, layout=(1, 2))
 
 # System regression
-learned_rmodel = constrained_system_regression(U, fu_hat, [10, 10], reverse=true)
+learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 
 # Port the model to x space for flowpipe computation
 #learned_rmodel_x = to_state_space_model(dtf, learned_rmodel)
 target_region_u = Rx_to_Ru(dtf, target_region)
 
 println("target region: ", target_region_u)
-flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration)
+flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
 
 plot(flow_pipe, vars=(1,2))
 

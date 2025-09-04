@@ -1,4 +1,4 @@
-import Base: +, -, *, zero, one
+import Base: +, -, *, /, zero, one
 
 struct BernsteinPolynomial{T, D}
     coeffs::AbstractArray{T, D}
@@ -8,8 +8,8 @@ function (p::BernsteinPolynomial{T, D})(x::Union{AbstractVector{S}, AbstractMatr
     return decasteljau(p, x)
 end
 
-zero(::BernsteinPolynomial{T, D}) = BernsteinPolynomial{T, D}(zeros(T, (1 for _ in 1:D)))
-one(::BernsteinPolynomial{T, D}) = BernsteinPolynomial{T, D}(ones(T, (1 for _ in 1:D)))
+zero(::Type{BernsteinPolynomial{T, D}}) where {T, D} = BernsteinPolynomial{T, D}(zeros(T, (1 for _ in 1:D)...))
+one(::Type{BernsteinPolynomial{T, D}}) where {T, D} = BernsteinPolynomial{T, D}(ones(T, (1 for _ in 1:D)...))
 
 function +(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
     return add(p, q)
@@ -17,6 +17,14 @@ end
 
 function *(a::Number, p::BernsteinPolynomial{T, D}) where {T, D}
     return BernsteinPolynomial{promote_type(T, typeof(a)), D}(a .* p.coeffs)
+end
+
+function *(p::BernsteinPolynomial{T, D}, a::Number) where {T, D}
+    return BernsteinPolynomial{promote_type(T, typeof(a)), D}(a .* p.coeffs)
+end
+
+function /(p::BernsteinPolynomial{T, D}, a::Number) where {T, D}
+    return BernsteinPolynomial{promote_type(T, typeof(a)), D}(1.0/a .* p.coeffs)
 end
 
 function *(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) where {T, D}
@@ -82,14 +90,44 @@ function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractMatrix{S}) where {
     return vec(current_coeffs)
 end
 
+function log_eval(p::BernsteinPolynomial{T, D}, x::AbstractVector{S}) where {T, S, D}
+    log_x = log.(x)
+    log_1mx = log.(1.0 .- x)
+
+    #shape = size(p)
+    degrees = deg(p)
+
+    basis_vectors = []
+    for i in 1:D
+        idx_vec = [k for k in 0:degrees[i]]
+        log_binom = lgamma(degrees[i] .+ 1.0) .- lgamma.(idx_vec .+ 1.0) - lgamma.(degrees[i] .- idx_vec .+ 1)
+        log_basis_vec = log_binom .+ idx_vec .* log_x[i] .+ (degrees[i] .- idx_vec) .* log_1mx[i]
+        push!(basis_vectors, exp.(log_basis_vec))
+    end
+
+    reshaped_vectors = []
+    for i in 1:D
+        dim_tuple = ones(Int, D)
+        dim_tuple[i] = length(basis_vectors[i])
+        push!(reshaped_vectors, reshape(basis_vectors[i], tuple(dim_tuple...)))
+    end
+    outter_prod = reduce(.*, reshaped_vectors)
+
+    return reduce(+, p.coeffs .* outter_prod)
+end
+
 function differentiate(p::BernsteinPolynomial{T, D}, diff_dim::Int) where {T, D}
     @assert 1 <= diff_dim <= D "Variable index ($diff_dim) out of bounds for polynomial of dimension $D."
 
     n_i = size(p.coeffs, diff_dim) - 1
     @assert n_i >= 0 "Cannot differentiate along dimension of size 0l"
 
-    new_coeffs = n_i .* diff(p.coeffs, dims=diff_dim)
-    return BernsteinPolynomial{T, D}(new_coeffs)
+    if n_i == 0
+        return BernsteinPolynomial{T, D}(zero(p.coeffs))
+    else
+        new_coeffs = n_i .* diff(p.coeffs, dims=diff_dim)
+        return BernsteinPolynomial{T, D}(new_coeffs)
+    end
 end
 
 function integrate(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}

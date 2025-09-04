@@ -23,8 +23,8 @@ using FFTW
 import ReachabilityAnalysis as RA 
 
 include("BernsteinPolynomial.jl")
-include("BernsteinReachSets.jl")
 include("DataStructures.jl")
+include("BernsteinReachSets.jl")
 include("Visualizaton.jl")
 include("DistributionTransform.jl")
 include("SystemRegression.jl")
@@ -41,7 +41,7 @@ include("TaylorSpline.jl")
 export SystemModel, dimension, SpatioTemporalPoly
 
 # BernsteinPolynomial
-export BernsteinPolynomial, deg, dimension, decasteljau, differentiate, integrate, product, increase_degree, add, add!, affine_transform, upper_bound, lower_bound, to_mv_polynomial
+export BernsteinPolynomial, deg, dimension, decasteljau, log_eval, differentiate, integrate, product, increase_degree, add, add!, affine_transform, upper_bound, lower_bound, to_mv_polynomial
 
 # BernsteinReachSets
 export create_bernstein_expansion

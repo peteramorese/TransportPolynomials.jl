@@ -19,7 +19,7 @@ coeffs_p = reshape([1.0, 2.0, 4.0, 3.0, 7.0, 4.0, 2.0, 4.0, 5.0, 5.0, 8.0, 8.0, 
 
 p = BernsteinPolynomial{Float64, 3}(coeffs_p)
 
-p_mono = to_mv_polynomial(p)
+#p_mono = to_mv_polynomial(p)
 
 #sub_region = Hyperrectangle(low=[.2, .3, .2], high=[0.4, 0.4, 0.4])
 #p_tf = affine_transform(p, sub_region)
@@ -36,7 +36,8 @@ x = [0.3, 0.35, 0.3]
 #x_tf = [0.5, 0.5, 0.5]
 
 println("De casteljau p: ", decasteljau(p, x))
-println("MV poly p: ", p_mono(x))
+println("log eval p: ", log_eval(p, x))
+#println("MV poly p: ", p_mono(x))
 #println("De casteljau ptf: ", decasteljau(p_tf, x_tf))
 #println("De casteljau p_incr: ", decasteljau(p_incr, x))
 #println("prod De casteljau: ", decasteljau(prod, x))

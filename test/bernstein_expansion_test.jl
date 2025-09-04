@@ -11,8 +11,8 @@ pyplot()
 
 μ = 1.0
 true_system = SystemModel([
-    x -> x[:, 2],
-    x -> μ * (1.0 .- x[:, 1].^2) .* x[:, 2] .- x[:, 1] 
+    x -> x[2],
+    x -> μ * (1.0 .- x[1].^2) .* x[2] .- x[1] 
 ])
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
@@ -28,7 +28,8 @@ plt_u_data = quiver(U[:, 1], U[:, 2], quiver=(fu_hat[:, 1], fu_hat[:, 2]), title
 plot(plt_x_data, plt_u_data, layout=(1, 2))
 
 # System regression
-learned_model = constrained_system_regression(U, fu_hat, [10, 10])
+learned_model = constrained_system_regression(U, fu_hat, [5, 5])
+println("max coeff: ", maximum(learned_model.f[1].coeffs))
 
 duration = 1.0
 bernstein_expansion = create_bernstein_expansion(learned_model, 3, 1.0)
@@ -45,8 +46,19 @@ input[:, 3] *= u_test[2]
 
 plts = []
 for i in 1:D
-    
+    euler_vals = []
+    for t in t_ls
+        u_test_f = propagate_sample(u_test, t, learned_model)    
+        push!(euler_vals, u_test_f)
+    end
+
+    expansion_vals = bernstein_expansion(input)
+
+    plt = plot(t_ls, euler_vals, label="euler")
+    plot!(plt, t_ls, expansion_vals, label="expansion")
+    push!(plts, plt)
 end
+plot(plts..., layout=(D, 1))
 
 
 

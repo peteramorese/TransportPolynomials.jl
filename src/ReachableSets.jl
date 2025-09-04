@@ -4,12 +4,16 @@ function to_mv_polynomial_system(model::SystemModel{BernsteinPolynomial{T, D}}, 
     return SystemModel(mvp_f)
 end
 
-function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle, duration::Float64) 
+function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle, duration::Float64, eval_fcn=nothing) 
 
     function f!(dx, x, p, t)
         for i in 1:D
             #dx[i] = model.f[i](x)
-            dx[i] = model.f[i](x)
+            if isnothing(eval_fcn)
+                dx[i] = model.f[i](x)
+            else
+                dx[i] = eval_fcn(model.f[i], x)
+            end
             #dx[i] = decasteljau(model.f[i], x)[1]
         end
         #dx = decasteljau.(model.f, Ref(x))
@@ -18,10 +22,6 @@ function compute_taylor_reach_sets(model::SystemModel; init_set::Hyperrectangle,
 
     D = dimension(model)
 
-    domain = Hyperrectangle(low=zeros(D), high=ones(D))
-
-
-    println("D: ", D)
     #sys = RA.ConstrainedPolynomialContinuousSystem(model.f, domain)
     #sys = RA.PolynomialContinuousSystem(model.f)
     #sys = PolynomialContinuousSystem(model.f, dimension(model))
