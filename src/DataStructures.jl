@@ -8,7 +8,7 @@ end
 function (model::SystemModel{P})(x::AbstractVector{S}) where {P, S}
     D = dimension(model)
     @assert length(x) == D "Input x must have same dimension as model"
-    return [f_i(x_mat) for f_i in model.f]
+    return [f_i(x) for f_i in model.f]
 end
 
 function (model::SystemModel{P})(x::AbstractMatrix{S}) where {P, S}
