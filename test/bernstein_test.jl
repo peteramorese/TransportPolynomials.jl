@@ -32,11 +32,15 @@ p = BernsteinPolynomial{Float64, 3}(coeffs_p)
 #q = BernsteinPolynomial{Float64, 3}(coeffs_q)
 #prod = product(p, q)
 #x = [0.5 0.5 0.3; 0.25 0.75 0.8]
-x = [0.3, 0.35, 0.3]
+x = [0.3, 0.55, 0.3]
 #x_tf = [0.5, 0.5, 0.5]
 
 println("De casteljau p: ", decasteljau(p, x))
-println("log eval p: ", log_eval(p, x))
+
+p_13 = decasteljau(p, dim=2, xi=x[2])
+x13 = [x[1], x[3]]
+println("De casteljau p13: ", decasteljau(p_13, x13))
+#println("log eval p: ", log_eval(p, x))
 #println("MV poly p: ", p_mono(x))
 #println("De casteljau ptf: ", decasteljau(p_tf, x_tf))
 #println("De casteljau p_incr: ", decasteljau(p_incr, x))

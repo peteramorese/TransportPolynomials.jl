@@ -35,7 +35,8 @@ learned_model = constrained_system_regression(U, fu_hat, [4, 4])
 #println()
 
 duration = 1.0
-bernstein_expansion = create_bernstein_expansion(learned_model, 8, 1.0)
+bernstein_expansion_ub = create_bernstein_expansion(learned_model, 8, upper=true)
+bernstein_expansion_lb = create_bernstein_expansion(learned_model, 8, upper=false)
 
 u_test = [0.2, 0.3]
 
@@ -57,10 +58,12 @@ for (k, t) in enumerate(t_ls)
 end
 
 for i in 1:D
-    expansion_vals = bernstein_expansion[i](input)
+    expansion_vals_ub = bernstein_expansion_ub[i](input)
+    expansion_vals_lb = bernstein_expansion_lb[i](input)
 
     plt = plot(t_ls, euler_vals[i, :], label="euler")
-    plot!(plt, t_ls, expansion_vals, label="expansion")
+    plot!(plt, t_ls, expansion_vals_ub, label="expansion")
+    plot!(plt, t_ls, expansion_vals_lb, label="expansion")
     push!(plts, plt)
 end
 plot(plts..., layout=(D, 1))

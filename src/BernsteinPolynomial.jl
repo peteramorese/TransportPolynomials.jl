@@ -58,6 +58,29 @@ function increase_degree(p::BernsteinPolynomial{T, D}, m::NTuple{D, Int}) where 
     return BernsteinPolynomial{T,D}(coeffs)
 end
 
+function decasteljau(p::BernsteinPolynomial{T, D}; dim::Int, xi::S) where {T, S, D}
+    @assert 1 <= dim <= D "Dimension i must be between 1 and $D."
+
+    coeffs = p.coeffs
+    n = size(coeffs, dim) - 1  # degree along dimension i
+    coeffs_new = Array{promote_type(T, S), D-1}(undef, ntuple(i -> i < dim ? size(coeffs,i) : size(coeffs,i+1), D-1))
+
+    # Work array, initially the coefficients
+    work = copy(coeffs)
+
+    # Apply de Casteljau along dimension i
+    for r in 1:n
+        c1 = selectdim(work, dim, 1:size(work,dim)-1)
+        c2 = selectdim(work, dim, 2:size(work,dim))
+        work = @. (1 - xi) * c1 + xi * c2
+    end
+
+    # Drop the fully collapsed dimension
+    coeffs_new .= dropdims(work, dims=dim)
+
+    return BernsteinPolynomial(coeffs_new)
+end
+
 function decasteljau(p::BernsteinPolynomial{T, D}, x::AbstractVector{S}) where {T, S, D}
     return decasteljau(p, reshape(x, 1, :))[1]
 end
@@ -247,6 +270,16 @@ function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{F
         current_coeffs = mapslices(c -> _transform_1d(c, a, b), current_coeffs, dims=d)
     end
     
+    return BernsteinPolynomial(current_coeffs)
+end
+
+function affine_transform(p::BernsteinPolynomial{T, D}; dim::Int, lower::Float64, upper::Float64) where {T, D}
+    current_coeffs = copy(p.coeffs)
+    if !(0.0 <= a <= b <= 1.0)
+        error("Lower and upper must be ∈ [0, 1].")
+    end
+    current_coeffs = mapslices(c -> _transform_1d(c, lower, upper), current_coeffs, dims=dim)
+
     return BernsteinPolynomial(current_coeffs)
 end
 

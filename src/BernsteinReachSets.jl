@@ -1,20 +1,80 @@
+"""
+Create a Bernstein-Taylor expansion about a region
+"""
+struct BernsteinFieldExpansion{T, tD}
+    field_expansion_lb::Vector{BernsteinPolynomial{T, tD}}
+    field_expansion_ub::Vector{BernsteinPolynomial{T, tD}}
+    duration::Float64
+    region::Hyperrectangle
+end
+
+function rescale_duration(bfe::BernsteinFieldExpansion{T, tD}, new_duration::Float64) where {T, tD}
+    D = tD -1
+    new_lb = Vector{BernsteinPolynomial{T, tD}}(undef, D)
+    new_ub = Vector{BernsteinPolynomial{T, tD}}(undef, D)
+    for i in 1:D
+        new_lb[i] = affine_transform(bfe.field_expansion_lb[i], dim=1, lower=0.0, upper=new_duration)
+        new_ub[i] = affine_transform(bfe.field_expansion_ub[i], dim=1, lower=0.0, upper=new_duration)
+    end
+    return BernsteinFieldExpansion{T, tD}(new_lb, new_ub, new_duration, bfe.region)
+end
+
+function reposition(bfe::BernsteinFieldExpansion{T, tD}, new_region::Hyperrectangle) where {T, tD}
+    D = tD -1
+    new_lb = Vector{BernsteinPolynomial{T, tD}}(undef, D)
+    new_ub = Vector{BernsteinPolynomial{T, tD}}(undef, D)
+
+    mins = low(new_region)
+    maxes = high(new_region)
+
+    for i in 1:D
+        for i in 1:D
+            new_lb[i] = affine_transform(bfe.field_expansion_lb[i], dim=(i+1), lower=mins[i], upper=maxes[i])
+            new_ub[i] = affine_transform(bfe.field_expansion_ub[i], dim=(i+1), lower=mins[i], upper=maxes[i])
+        end
+    end
+    return BernsteinFieldExpansion{T, tD}(new_lb, new_ub, bfe.duration, new_region)
+end
+
+function final_region(bfe::BernsteinFieldExpansion{T, tD}, t::Float64=nothing) where {T, tD}
+    t_eval = isnothing(t) ? bfe.duration : t
+    mins = []
+    maxes = []
+    for i in 1:D
+        # Evaluate the Bernstein-Taylor expansions at the desired time
+        space_bern_lb = decasteljau(bfe.field_expansion_lb[i], dim=1, xi=t_eval)
+        space_bern_ub = decasteljau(bfe.field_expansion_ub[i], dim=1, xi=t_eval)
+
+        push!(mins, lower_bound(space_bern_lb))
+        push!(maxes, upper_bound(space_bern_ub))
+    end
+    return Hyperrectangle(low=mins, high=maxes)
+end
+
+function transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD}
+    mins = []
+    maxes = []
+    for i in 1:D
+        # Bound the expansion over the whole region and time interval
+        push!(mins, lower_bound(bfe.field_expansion_lb[i]))
+        push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
+    end
+    return Hyperrectangle(low=mins, high=maxes)
+end
+
+function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, D}}; init_set::Hyperrectangle, duration::Float64; expansion_degree::Int=4, Δt_max::Float64=1.0)
+    # Create the original field expansion
+    bfe = create_bernstein_field_expansion(model, expansion_degree, duration=Δt_max)
+
+    
+end
+
 function lie_derivative(p_field::Vector{BernsteinPolynomial{T, D}}, time_diff_field::Vector{BernsteinPolynomial{T, D}}) where {T, D}
     dpdt_vec = similar(p_field)
     for i in 1:D
         p_i = p_field[i]
 
         spatio_derivs = [differentiate(p_i, j) for j in 1:D]
-
-        # Take the dot product between the gradient of the field component and hte time derivative field
-        #println("spatio max: ", maximum(spatio_derivs[1].coeffs))
-        #println("spatio max: ", maximum(spatio_derivs[2].coeffs))
-
-        #for j in 1:D
-        #    println("spatio i partial j: ", j, " = ", spatio_derivs[j].coeffs)
-        #    println("time diff field j: ", time_diff_field[j].coeffs)
-        #    println("prod: ", (spatio_derivs[j] * time_diff_field[j]).coeffs)
-        #end
-
 
         dpdt_vec[i] = reduce(add, spatio_derivs .* time_diff_field)
     end
@@ -23,21 +83,12 @@ end
 
 function compute_coefficient_vectors(model::SystemModel{BernsteinPolynomial{T, D}}, degree::Int=1) where {T, D}
     coefficients = ones(BernsteinPolynomial{T, D}, D, degree + 1) #Matrix{BernsteinPolynomial{T, D}}(undef, D, degree + 1) 
-    #coefficients[:, 1] = model.f
     for i in 1:D
-        #coeffs = zeros()
         shape = ones(Int, D)
         shape[i] = 2
         coefficients[i, 1] = BernsteinPolynomial{T, D}(reshape([0, 1], shape...))
     end
     for i in 1:(degree)
-        #### TEST
-        #output = lie_derivative(coefficients[:, i], model.f)
-        #println("----- i+1: ")
-        #println("output[1]: ", output[1].coeffs)
-        #readline()
-        #### 
-
         coefficients[:, i + 1] = lie_derivative(coefficients[:, i], model.f)
     end
     return coefficients
@@ -77,48 +128,27 @@ function create_field_bound_polys(degree::Int, next_coeff_vec::Vector{BernsteinP
     return field_bound_polys
 end
 
-function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}}, degree::Int, duration::Float64=1.0, deg_incr::Int=0) where {T, D}
-    println("deg: ", degree)
+function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}}, degree::Int; duration::Float64=1.0, deg_incr::Int=0, upper::Bool=true) where {T, D}
     sol_poly, nxt_coeff_vec = create_sol_poly_and_nxt_coeff_vec(model, degree)
-    #println(maximum(sol_poly.spatio_vector_field_coeffs[1, end].coeffs))
-    println("t coeffs: ", sol_poly.t_coeffs)
-    #println("sol poly f1: ", sol_poly.spatio_vector_field_coeffs[1, 2].coeffs)
     taylor_scaled_coeffs = [sol_poly.t_coeffs[i] * sol_poly.spatio_vector_field_coeffs[:, i] for i in 1:(degree + 1)] # Converts into scaled vector of vectors
 
     # Append the bound poly
-    #println("ub: ", nxt_coeff_vec[1].coeffs)
-    ub_mag = max.(abs.(upper_bound.(nxt_coeff_vec)), abs.(lower_bound.(nxt_coeff_vec)))
-    #ub = upper_bound.(nxt_coeff_vec)
+    #ub_mag = max.(abs.(upper_bound.(nxt_coeff_vec)), abs.(lower_bound.(nxt_coeff_vec)))
+    if upper
+        ub = upper_bound.(nxt_coeff_vec)
+        bound_spatio_vector_field = ones(BernsteinPolynomial{T, D}, D) .* ub / factorial(degree + 1)
+    else
+        lb = lower_bound.(nxt_coeff_vec)
+        bound_spatio_vector_field = ones(BernsteinPolynomial{T, D}, D) .* lb / factorial(degree + 1)
+    end
     #println("upper bound: ", ub)
-    println("upper bound mag: ", ub_mag)
-    bound_spatio_vector_field = ones(BernsteinPolynomial{T, D}, D) .* ub_mag / factorial(degree + 1)
+    #println("upper bound mag: ", ub_mag)
 
     push!(taylor_scaled_coeffs, bound_spatio_vector_field)
 
-    last_ts_coeffs = taylor_scaled_coeffs[end]
-    for i in 1:D
-        println(" BOUND COEFFS: ", last_ts_coeffs[i].coeffs)
-    end
-
     # Bernsteinify the scaled coefficients to get a Bernstein polynomial in space and time
-    #println(maximum(taylor_scaled_coeffs[end][1].coeffs))
-    println("sp vf coeffs size: ", size(sol_poly.spatio_vector_field_coeffs))
-    println("len ts coefs:", length(taylor_scaled_coeffs))
     bernstein_time_coeffs = bernsteinify(taylor_scaled_coeffs, deg_incr)
 
-    for ts_coefs in taylor_scaled_coeffs
-        println("ts-")
-        for c in ts_coefs
-            println(size(c.coeffs))
-        end
-    end
-    for time_coeff in bernstein_time_coeffs
-        println("-")
-        for c in time_coeff
-            println(size(c.coeffs))
-        end
-    end
-    #println(maximum(bernstein_time_coeffs[end][1].coeffs))
 
     # Convert to proper Bernstein polynomial type
     bernstein_expansions = Vector{BernsteinPolynomial{T, D+1}}(undef, D)
@@ -131,8 +161,6 @@ function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}
             bernstein_time_coeffs[j][i] = increase_degree(bernstein_time_coeffs[j][i], tuple((max_size .- 1)...))
         end
 
-        #println("spatio size: ", size(sol_poly.spatio_vector_field_coeffs[i, end].coeffs))
-        #println("time coeff size: ", size(bernstein_time_coeffs[end][i].coeffs))
         shape = tuple(degree + 2, max_size...) # Augment with time dimension
         coeffs = Array{T, D+1}(undef, shape)
         for j in 1:(degree + 2)
@@ -142,6 +170,13 @@ function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}
         bernstein_expansions[i] = BernsteinPolynomial{T, D+1}(coeffs)
     end
     return bernstein_expansions
+end
+
+function create_bernstein_field_expansion(model::SystemModel{BernsteinPolynomial{T, D}}, degree::Int; duration::Float64=1.0, deg_incr::Int=0) where {T, D}
+    lb = create_bernstein_expansion(model, degree, duration=duration, deg_incr=deg_incr, upper=false)
+    ub = create_bernstein_expansion(model, degree, duration=duration, deg_incr=deg_incr, upper=true)
+    region = Hyperrectangle(low=zeros(D), high=ones(D))
+    return BernsteinFieldExpansion(lb, ub, duration, region)
 end
 
 function bernsteinify(coefficients::Vector{Vector{BernsteinPolynomial{T, D}}}, deg_incr::Int=0) where {T, D}
