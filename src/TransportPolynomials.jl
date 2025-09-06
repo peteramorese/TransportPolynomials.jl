@@ -44,13 +44,13 @@ export SystemModel, dimension, SpatioTemporalPoly
 export BernsteinPolynomial, deg, dimension, decasteljau, log_eval, differentiate, integrate, product, increase_degree, add, add!, affine_transform, upper_bound, lower_bound, to_mv_polynomial
 
 # BernsteinReachSets
-export create_bernstein_expansion
+export create_bernstein_expansion, compute_bernstein_reach_sets
 
 # Visualization
 export plot_data, plot_polynomial_surface, plot_2D_pdf, 
     plot_2D_erf_space_pdf, plot_2D_region, plot_2D_region_in_3D, plot_2D_pdf, plot_2D_erf_space_vf,
     plot_vol_poly_density_vs_time, plot_euler_density_vs_time, plot_integ_poly_prob_vs_time,
-    plot_euler_mc_prob_vs_time, plot_2D_reachable_sets
+    plot_euler_mc_prob_vs_time, plot_2D_reachable_sets, plot_2D_flowpipe
 
 # DistributionTransform
 export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_state_space_model, to_u_space_model

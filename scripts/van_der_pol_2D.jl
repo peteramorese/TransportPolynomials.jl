@@ -10,8 +10,8 @@ pyplot()
 
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
-target_region = Hyperrectangle(low=[-2.0, -1.0], high=[2.0, 1.0])
-duration = 0.1
+target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.201, 0.201])
+duration = 1.2
 
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
@@ -31,17 +31,23 @@ learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 #learned_rmodel_x = to_state_space_model(dtf, learned_rmodel)
 target_region_u = Rx_to_Ru(dtf, target_region)
 
-println("target region: ", target_region_u)
-flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
+#println("target region: ", target_region_u)
+println("start set region: ", low(target_region_u), " - ", high(target_region_u))
 
+flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
 plot(flow_pipe, vars=(1,2))
+
+#flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, 1.2, expansion_degree=6, Δt_max=0.05)
+#plt_fp = plot_2D_flowpipe(flow_pipe)
+#display(plt_fp)
+
 
 #u1_ls = range(0.01, 0.99, length=20)
 #u2_ls = range(0.01, 0.99, length=20)
 #u1_grid = repeat(u1_ls, 1, length(u2_ls)) |> vec
 #u2_grid = repeat(transpose(u2_ls), length(u1_ls), 1) |> vec
 #U_grid = hcat(u1_grid, u2_grid)
-#f_learned_grid = learned_model(U_grid)
+#f_learned_grid = learned_rmodel(U_grid)
 #
 ## Compare with ground truth
 #true_system_u = to_u_space_model(dtf, true_system)
@@ -58,7 +64,7 @@ plot(flow_pipe, vars=(1,2))
 #xlims!(plt_data_pts, (-0.1, 1.1))
 #ylims!(plt_data_pts, (-0.1, 1.1))
 #
-#plot(plt_learned_vf, plt_true_vf, plt_data_pts, layout=(1, 3))
+#plot(plt_learned_vf, plt_true_vf, plt_data_pts, plt_fp, layout=(1, 4))
 
 
 

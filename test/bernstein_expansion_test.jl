@@ -35,8 +35,9 @@ learned_model = constrained_system_regression(U, fu_hat, [4, 4])
 #println()
 
 duration = 1.0
-bernstein_expansion_ub = create_bernstein_expansion(learned_model, 8, upper=true)
-bernstein_expansion_lb = create_bernstein_expansion(learned_model, 8, upper=false)
+#duration = 2.0
+bernstein_expansion_ub = create_bernstein_expansion(learned_model, 8, upper=true, duration=duration)
+bernstein_expansion_lb = create_bernstein_expansion(learned_model, 8, upper=false, duration=duration)
 
 u_test = [0.2, 0.3]
 
@@ -51,6 +52,8 @@ input[:, 3] *= u_test[2]
 D = dimension(learned_model)
 plts = []
 
+#time_rescaled_model_f = learned_model.
+
 euler_vals = Matrix{Float64}(undef, D, length(t_ls))
 for (k, t) in enumerate(t_ls)
     u_test_f = propagate_sample(u_test, t, learned_model, n_timesteps=100)    
@@ -64,6 +67,7 @@ for i in 1:D
     plt = plot(t_ls, euler_vals[i, :], label="euler")
     plot!(plt, t_ls, expansion_vals_ub, label="expansion")
     plot!(plt, t_ls, expansion_vals_lb, label="expansion")
+    ylims!(plt, 0.0, 1.0)
     push!(plts, plt)
 end
 plot(plts..., layout=(D, 1))

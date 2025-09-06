@@ -275,7 +275,7 @@ end
 
 function affine_transform(p::BernsteinPolynomial{T, D}; dim::Int, lower::Float64, upper::Float64) where {T, D}
     current_coeffs = copy(p.coeffs)
-    if !(0.0 <= a <= b <= 1.0)
+    if !(0.0 <= lower <= upper <= 1.0)
         error("Lower and upper must be ∈ [0, 1].")
     end
     current_coeffs = mapslices(c -> _transform_1d(c, lower, upper), current_coeffs, dims=dim)

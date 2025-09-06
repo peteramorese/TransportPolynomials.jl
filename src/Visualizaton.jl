@@ -98,7 +98,7 @@ function plot_2D_region(plt, region::Hyperrectangle{Float64}; alpha=0.5, color=:
     x = [c[1] - r[1], c[1] + r[1], c[1] + r[1], c[1] - r[1], c[1] - r[1]]
     y = [c[2] - r[2], c[2] - r[2], c[2] + r[2], c[2] + r[2], c[2] - r[2]]
 
-    plot!(x, y, seriestype=:shape, fillalpha=alpha, c=color, label=label) 
+    return plot!(plt, x, y, seriestype=:shape, fillalpha=alpha, c=color, label=label) 
 end
 
 function plot_2D_region_in_3D(plt, region::Hyperrectangle{Float64}; alpha=0.5)
@@ -243,5 +243,15 @@ function plot_euler_mc_prob_vs_time(plt::Plots.Plot, region::Hyperrectangle{Floa
 end
 
 function plot_2D_reachable_sets(solz)
-    plot(solz; vars=(1,2), xlims=(0.0, 1.0), ylims=(0.0, 1.0))
+    return plot(solz; vars=(1,2), xlims=(0.0, 1.0), ylims=(0.0, 1.0))
+end
+
+function plot_2D_flowpipe(fp::Flowpipe)
+    plt = plot()
+    xlims!(plt, 0.0, 1.0)
+    ylims!(plt, 0.0, 1.0)
+    for trans_set in fp.transition_sets
+        plot_2D_region(plt, trans_set.set, alpha=0.1)
+    end
+    return plt
 end
