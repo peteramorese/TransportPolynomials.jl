@@ -73,12 +73,14 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 
-function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, D}}, init_set::Hyperrectangle, duration::Float64; expansion_degree::Int=4, Δt_max::Float64=1.0) where {T, D}
+function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, D}}, init_set::Hyperrectangle, duration::Float64; expansion_degree::Int=4, Δt_max::Float64=1.0, deg_incr::Int=0) where {T, D}
     # Create the original field expansion
-    bfe = create_bernstein_field_expansion(model, expansion_degree, duration=Δt_max)
+    bfe = create_bernstein_field_expansion(model, expansion_degree, duration=Δt_max, deg_incr=deg_incr)
 
     start_set = init_set 
     total_time = 0.0
+
+    println("start set region: ", low(start_set), " - ", high(start_set))
 
     trans_sets = Vector{TransitionSet}()
     while total_time < duration
@@ -86,10 +88,10 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
         bfe_start_set = reposition(bfe, start_set)
         trans_region = get_transition_region(bfe_start_set)
         end_set = get_final_region(bfe_start_set, trans_region.duration)
-        println("total_time: ", total_time)
-        println("start set region: ", low(start_set), " - ", high(start_set))
-        println("end set region: ", low(end_set), " - ", high(end_set))
-        println("trn set region: ", low(trans_region.set), " - ", high(trans_region.set))
+        #println("total_time: ", total_time)
+        #println("start set region: ", low(start_set), " - ", high(start_set))
+        #println("end set region: ", low(end_set), " - ", high(end_set))
+        #println("trn set region: ", low(trans_region.set), " - ", high(trans_region.set))
 
         # Clamp set to domain
         end_set_clamp_low = max.(low(end_set), zeros(Float64, D))

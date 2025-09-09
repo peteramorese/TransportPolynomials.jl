@@ -10,8 +10,9 @@ pyplot()
 
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
-target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.201, 0.201])
-duration = 1.2
+target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.3, 0.3])
+duration = 5.2
+vp_deg = 3 # Volume polynomial degree
 
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
@@ -34,13 +35,52 @@ target_region_u = Rx_to_Ru(dtf, target_region)
 #println("target region: ", target_region_u)
 println("start set region: ", low(target_region_u), " - ", high(target_region_u))
 
-flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
-plot(flow_pipe, vars=(1,2))
+#flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
+#plot(flow_pipe, vars=(1,2))
 
-#flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, 1.2, expansion_degree=6, Δt_max=0.05)
-#plt_fp = plot_2D_flowpipe(flow_pipe)
+flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=8, Δt_max=0.10, deg_incr=30)
+plt_fp = plot_2D_flowpipe(flow_pipe)
+plt_fp = plot_2D_region(plt_fp, target_region_u)
 #display(plt_fp)
 
+
+ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
+tamed_ts = create_tamed_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
+
+function get_seg_t(n)
+    t_seg = 0.0
+    for i in 1:n
+        t_seg += ts.segments[i].duration
+    end
+    return t_seg
+end
+
+t_seg = get_seg_t(1)
+println("t seg: ", t_seg)
+t_b4 = t_seg - 0.001
+t_af = t_seg + 0.001
+println("tamed ts b4: ", tamed_ts(t_b4))
+println("tamed ts af: ", tamed_ts(t_af))
+
+## Plot the bounding boxes of each segment
+#plt_boxes = plot()
+#xlims!(plt_boxes, 0.0, 1.0)
+#ylims!(plt_boxes, 0.0, 1.0)
+#for segment in tamed_ts.segments
+#    plot_2D_region(plt_boxes, segment.Ω_bounding_box)
+#end
+
+# Plot the probability functions
+n_pts = 100
+plt_vp_prob = plot()
+t_pts = range(0.0, duration, n_pts)
+ts_pts = [ts(t) for t in t_pts]
+tamed_ts_pts = [tamed_ts(t) for t in t_pts]
+plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
+plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
+
+
+plot(plt_fp, plt_vp_prob, layout=(1,2), size=(1200, 400))
 
 #u1_ls = range(0.01, 0.99, length=20)
 #u2_ls = range(0.01, 0.99, length=20)

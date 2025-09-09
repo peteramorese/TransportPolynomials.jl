@@ -251,7 +251,7 @@ function plot_2D_flowpipe(fp::Flowpipe)
     xlims!(plt, 0.0, 1.0)
     ylims!(plt, 0.0, 1.0)
     for trans_set in fp.transition_sets
-        plot_2D_region(plt, trans_set.set, alpha=0.1)
+        plot_2D_region(plt, trans_set.set, alpha=0.0)
     end
     return plt
 end
