@@ -24,20 +24,6 @@ function probability_and_geometric_ubound(region::Hyperrectangle{Float64}, t_eva
     return prob, bound
 end
 
-function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
-    Δt = t_duration / n_timesteps
-
-    multiplier = 1 
-    if !forward 
-        multiplier = -1
-    end
-
-    for i in 1:n_timesteps
-        x_eval += multiplier * Δt * model(x_eval)
-    end 
-    return x_eval
-end
-
 function euler_density(x_eval::Vector{Float64}, t_eval::Float64, model::SystemModel; n_timesteps::Int=100)
     log_density = 0.0
     Δt = t_eval / n_timesteps

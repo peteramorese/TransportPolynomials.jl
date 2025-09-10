@@ -6,13 +6,14 @@ using Plots
 using LazySets
 using Distributions
 using StaticArrays
-pyplot()
+plotly()
+#pyplot()
 
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
 target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.3, 0.3])
-duration = 5.2
-vp_deg = 3 # Volume polynomial degree
+duration = 3.5
+vp_deg = 5 # Volume polynomial degree
 
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
@@ -33,34 +34,22 @@ learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 target_region_u = Rx_to_Ru(dtf, target_region)
 
 #println("target region: ", target_region_u)
-println("start set region: ", low(target_region_u), " - ", high(target_region_u))
+println("init set region: ", low(target_region_u), " - ", high(target_region_u))
 
 #flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
 #plot(flow_pipe, vars=(1,2))
 
-flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=8, Δt_max=0.10, deg_incr=30)
-plt_fp = plot_2D_flowpipe(flow_pipe)
+flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=5, Δt_max=0.10, deg_incr=30)
+flow_pipe_end_sets = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=5, Δt_max=0.10, deg_incr=20, return_transition_sets=false)
+
+#plt_fp = plot_2D_flowpipe(flow_pipe)
+plt_fp = plot_2D_flowpipe(flow_pipe_end_sets)
 plt_fp = plot_2D_region(plt_fp, target_region_u)
 #display(plt_fp)
-
 
 ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 tamed_ts = create_tamed_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 
-function get_seg_t(n)
-    t_seg = 0.0
-    for i in 1:n
-        t_seg += ts.segments[i].duration
-    end
-    return t_seg
-end
-
-t_seg = get_seg_t(1)
-println("t seg: ", t_seg)
-t_b4 = t_seg - 0.001
-t_af = t_seg + 0.001
-println("tamed ts b4: ", tamed_ts(t_b4))
-println("tamed ts af: ", tamed_ts(t_af))
 
 ## Plot the bounding boxes of each segment
 #plt_boxes = plot()
@@ -70,14 +59,31 @@ println("tamed ts af: ", tamed_ts(t_af))
 #    plot_2D_region(plt_boxes, segment.Ω_bounding_box)
 #end
 
+# Sample trajectories from the system to validate the reach sets
+n_val_traj = 20
+lower_bounds = low(target_region_u)
+upper_bounds = high(target_region_u)
+
+x_trajs = []
+x_traj_init_states = lower_bounds' .+ rand(n_val_traj, 2) .* (upper_bounds - lower_bounds)'
+for i in 1:n_val_traj
+    x_traj = propagate_sample_traj(x_traj_init_states[i, :], duration, learned_rmodel)
+    push!(x_trajs, x_traj)
+end
+
 # Plot the probability functions
+
 n_pts = 100
 plt_vp_prob = plot()
-t_pts = range(0.0, duration, n_pts)
+t_pts = range(0.0, duration, length=n_pts)
 ts_pts = [ts(t) for t in t_pts]
 tamed_ts_pts = [tamed_ts(t) for t in t_pts]
 plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
 plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
+
+for x_traj in x_trajs
+    plot!(plt_fp, x_traj[:, 1], x_traj[:, 2], label=nothing)
+end
 
 
 plot(plt_fp, plt_vp_prob, layout=(1,2), size=(1200, 400))

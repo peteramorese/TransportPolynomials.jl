@@ -6,19 +6,19 @@ using Plots
 using LazySets
 using Distributions
 using StaticArrays
-pyplot()
+plotly()
 
 
-μ = 1.0
-true_system = SystemModel([
-    x -> x[2],
-    x -> μ * (1.0 .- x[1].^2) .* x[2] .- x[1] 
-])
+# Specifications
+true_system, dtf = van_der_pol(μ=1.0)
+target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.3, 0.3])
+#duration = 5.2
+#duration = 0.5
+vp_deg = 3 # Volume polynomial degree
+
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
 
-dtf_dists = [Normal(0.0, 0.5), Normal(0.0, 0.5)] # Specifies the initial distribution
-dtf = DistributionTransform(SVector(dtf_dists...))
 
 U, fu_hat = x_data_to_u_data(X, fx_hat, dtf)
 
@@ -28,7 +28,9 @@ plt_u_data = quiver(U[:, 1], U[:, 2], quiver=(fu_hat[:, 1], fu_hat[:, 2]), title
 plot(plt_x_data, plt_u_data, layout=(1, 2))
 
 # System regression
-learned_model = constrained_system_regression(U, fu_hat, [4, 4])
+learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
+
+target_region_u = Rx_to_Ru(dtf, target_region)
 #println()
 #println("MODEL f1: ", learned_model.f[1].coeffs)
 #println("MODEL f1 deg incr: ", increase_degree(learned_model.f[1], (5,4)).coeffs)
@@ -36,12 +38,20 @@ learned_model = constrained_system_regression(U, fu_hat, [4, 4])
 
 duration = 1.0
 #duration = 2.0
-bernstein_expansion_ub = create_bernstein_expansion(learned_model, 8, upper=true, duration=duration)
-bernstein_expansion_lb = create_bernstein_expansion(learned_model, 8, upper=false, duration=duration)
+#bernstein_expansion_ub = create_bernstein_expansion(learned_model, 5, upper=true, duration=duration)
+#bernstein_expansion_lb = create_bernstein_expansion(learned_model, 5, upper=false, duration=duration)
 
-u_test = [0.2, 0.3]
+bfe = create_bernstein_field_expansion(learned_rmodel, 5, duration=duration, deg_incr=0)
+bfe_start_set = reposition(bfe, target_region_u)
+end_set = get_final_region(bfe_start_set, 0.1)
+println(">>end set region: ", low(end_set), " - ", high(end_set))
+bernstein_expansion_ub = bfe.field_expansion_ub
+bernstein_expansion_lb = bfe.field_expansion_lb
 
-t_dur = 0.2
+
+u_test = [0.6558247, 0.7012]
+
+t_dur = 0.1
 t_pts = 100
 t_ls = range(0, t_dur, t_pts)
 input = ones(t_pts, 3)
@@ -49,14 +59,14 @@ input[:, 1] = t_ls
 input[:, 2] *= u_test[1]
 input[:, 3] *= u_test[2]
 
-D = dimension(learned_model)
+D = dimension(learned_rmodel)
 plts = []
 
 #time_rescaled_model_f = learned_model.
 
 euler_vals = Matrix{Float64}(undef, D, length(t_ls))
 for (k, t) in enumerate(t_ls)
-    u_test_f = propagate_sample(u_test, t, learned_model, n_timesteps=100)    
+    u_test_f = propagate_sample(u_test, t, learned_rmodel, n_timesteps=100)    
     euler_vals[:, k] = u_test_f
 end
 
@@ -64,9 +74,12 @@ for i in 1:D
     expansion_vals_ub = bernstein_expansion_ub[i](input)
     expansion_vals_lb = bernstein_expansion_lb[i](input)
 
-    plt = plot(t_ls, euler_vals[i, :], label="euler")
-    plot!(plt, t_ls, expansion_vals_ub, label="expansion")
-    plot!(plt, t_ls, expansion_vals_lb, label="expansion")
+    #plt = plot(t_ls, euler_vals[i, :], label="euler")
+    #plot!(plt, t_ls, expansion_vals_ub, label="expansion")
+    #plot!(plt, t_ls, expansion_vals_lb, label="expansion")
+    plt = plot(t_ls, euler_vals[i, :], label=nothing)
+    plot!(plt, t_ls, expansion_vals_ub, label=nothing)
+    plot!(plt, t_ls, expansion_vals_lb, label=nothing)
     ylims!(plt, 0.0, 1.0)
     push!(plts, plt)
 end

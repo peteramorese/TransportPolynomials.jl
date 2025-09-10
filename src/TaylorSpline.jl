@@ -16,10 +16,10 @@ function (ts::TaylorSpline)(t::Float64)
         if t < segment_time_end
             #println("  seg coeffs: ", segment.volume_function.coeffs)
             #println("input dur: ", t - segment_time_end + segment.duration, " output: ", segment.volume_function(t - segment_time_end + segment.duration))
-            return segment.volume_function(t - segment_time_end + segment.duration)
+            return segment.volume_function(abs(t - segment_time_end + segment.duration))
         end
     end
-    return ts.segments[end].volume_function(t - segment_time_end + ts.segments[end].duration)
+    return ts.segments[end].volume_function(abs(t - segment_time_end + ts.segments[end].duration))
     #error("Time $t exceeds the total duration of the Taylor spline.")
 end
 

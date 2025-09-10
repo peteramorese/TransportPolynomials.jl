@@ -33,6 +33,7 @@ struct TemporalPoly
 end
 
 function (p::TemporalPoly)(t::Float64)
+    #println("t: ", t)
     @assert t >= 0.0 "Time input must be non-negative"
     if t == 0.0
         return p.coeffs[1]

@@ -29,6 +29,7 @@ include("Visualizaton.jl")
 include("DistributionTransform.jl")
 include("SystemRegression.jl")
 include("Systems.jl")
+include("Euler.jl")
 #include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
 #include("BoundedVolumePolynomial.jl")
@@ -44,7 +45,7 @@ export SystemModel, dimension, SpatioTemporalPoly
 export BernsteinPolynomial, deg, dimension, decasteljau, log_eval, differentiate, integrate, product, increase_degree, add, add!, affine_transform, upper_bound, lower_bound, to_mv_polynomial
 
 # BernsteinReachSets
-export create_bernstein_expansion, compute_bernstein_reach_sets
+export create_bernstein_expansion, create_bernstein_field_expansion, compute_bernstein_reach_sets, reposition, get_final_region
 
 # Visualization
 export plot_data, plot_polynomial_surface, plot_2D_pdf, 
@@ -60,6 +61,9 @@ export generate_data, x_data_to_u_data, constrained_poly_regression, constrained
 
 # Systems
 export van_der_pol
+
+# Euler
+export propagate_sample, propagate_sample_traj
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff 
