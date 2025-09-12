@@ -12,7 +12,7 @@ plotly()
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
 target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.4, 0.4])
-duration = 3.15
+duration = 0.45
 vp_deg = 5 # Volume polynomial degree
 
 
@@ -46,7 +46,7 @@ target_region_u = Rx_to_Ru(dtf, target_region)
 #plot(flow_pipe, vars=(1,2))
 
 deg_incr = 20
-Δt_max = 0.01
+Δt_max = 0.1
 expansion_deg = 5
 println("FLOW PIPE")
 flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr)
@@ -102,6 +102,7 @@ ts_pts = [ts(t) for t in t_pts]
 tamed_ts_pts = [tamed_ts(t) for t in t_pts]
 plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
 plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
+hline!(plt_vp_prob, [0.0, 1.0], linestyle=:dash)
 
 for x_traj in x_trajs
     plot!(plt_fp, x_traj[:, 1], x_traj[:, 2], label=nothing)
@@ -109,7 +110,7 @@ for x_traj in x_trajs
 end
 
 
-plot(plt_fp, plt_end_sets, plt_vp_prob, layout=(1,3), size=(1200, 400))
+plot(plt_fp, plt_end_sets, plt_vp_prob, layout=(1,3), size=(1200, 400), legend=false)
 
 #u1_ls = range(0.01, 0.99, length=20)
 #u2_ls = range(0.01, 0.99, length=20)

@@ -16,10 +16,10 @@ function (ts::TaylorSpline)(t::Float64)
         if t < segment_time_end
             #println("  seg coeffs: ", segment.volume_function.coeffs)
             #println("input dur: ", t - segment_time_end + segment.duration, " output: ", segment.volume_function(t - segment_time_end + segment.duration))
-            return segment.volume_function(abs(t - segment_time_end + segment.duration))
+            return min(segment.volume_function(abs(t - segment_time_end + segment.duration)), 1.0)
         end
     end
-    return ts.segments[end].volume_function(abs(t - segment_time_end + ts.segments[end].duration))
+    return min(ts.segments[end].volume_function(abs(t - segment_time_end + ts.segments[end].duration)), 1.0)
     #error("Time $t exceeds the total duration of the Taylor spline.")
 end
 
@@ -46,7 +46,6 @@ function create_box_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_p
         bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff) 
     end
 
-    n_segments = length(flow_pipe.transition_sets)
     segments = []
 
     for (k, ts) in enumerate(flow_pipe.transition_sets)
@@ -84,6 +83,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         segment_duration = ts.duration
         R = ts.set
         #println("k: ", k, " R: ", R)
+        println("k: ", k)
 
         #println("Creating segment $k of $n_segments with duration $segment_duration")
 
@@ -104,7 +104,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         # (upper bound) prediction of Ω volume using the previous volume function and the end of its duration
         if k > 1
             pred_Ω_volume = prev_vf(segments[end].duration)
-            pred_volume_diff = volume(R) - pred_Ω_volume 
+            pred_volume_diff = clamp(volume(R) - pred_Ω_volume, 0.0, 1.0)
         else
             pred_Ω_volume = Inf
             pred_volume_diff = 0.0
@@ -114,9 +114,10 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         # vol(R) - vol(Ω_pred)
         # Worst case difference between integral of coefficients over R vs Ω_pred
         #println("ROC infemums: ", roc_infemums)
+        println("pred vol diff: " , pred_volume_diff)
         worst_case_roc_diff = pred_volume_diff * roc_infemums
 
-        #println("worst case integ diff: ", worst_case_roc_diff)
+        #println("worst case roc diff: ", worst_case_roc_diff)
         adjusted_roc = roc .- worst_case_roc_diff
         #adjusted_vf_coeffs = integ_poly.coeffs .- worst_case_integ_diff
 
@@ -127,8 +128,8 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
             push!(pred_roc, predictors[end](segment_duration))
         end
 
-        #println("pred roc: ",pred_roc)
-        #println("adj roc: ", adjusted_roc)
+        println("pred roc: ",pred_roc)
+        println("adj roc: ", adjusted_roc)
         #println("pred coeffs: ", pred_coeffs)
 
         # Compute the current volume function coefficients at the end of time time span
