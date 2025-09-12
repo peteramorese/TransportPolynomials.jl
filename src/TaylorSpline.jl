@@ -53,7 +53,7 @@ function create_box_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_p
         segment_duration = ts.duration
         R = ts.set
 
-        println("Creating segment $k of $n_segments with duration $segment_duration")
+        #println("Creating segment $k of $n_segments with duration $segment_duration")
 
         integ_poly = create_integ_poly(vol_poly, R)
 
@@ -85,7 +85,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         R = ts.set
         #println("k: ", k, " R: ", R)
 
-        println("Creating segment $k of $n_segments with duration $segment_duration")
+        #println("Creating segment $k of $n_segments with duration $segment_duration")
 
         #integ_poly = create_integ_poly(vol_poly, R)
 

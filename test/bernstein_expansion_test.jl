@@ -30,7 +30,12 @@ plot(plt_x_data, plt_u_data, layout=(1, 2))
 # System regression
 learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 
-target_region_u = Rx_to_Ru(dtf, target_region)
+#target_region_u = Rx_to_Ru(dtf, target_region)
+
+target_region_u = Hyperrectangle(low=[0.5564252697664893, 0.5628805173789195], high=[0.7863510709052677, 0.7904654471020098])
+#target_region_u = Hyperrectangle(low=[0.5558629902178214, 0.5624853257907159], high=[0.7862882641569429, 0.7904350215573519])
+
+
 #println()
 #println("MODEL f1: ", learned_model.f[1].coeffs)
 #println("MODEL f1 deg incr: ", increase_degree(learned_model.f[1], (5,4)).coeffs)
@@ -41,17 +46,22 @@ duration = 1.0
 #bernstein_expansion_ub = create_bernstein_expansion(learned_model, 5, upper=true, duration=duration)
 #bernstein_expansion_lb = create_bernstein_expansion(learned_model, 5, upper=false, duration=duration)
 
-bfe = create_bernstein_field_expansion(learned_rmodel, 5, duration=duration, deg_incr=0)
+test_t = 0.05
+bfe = create_bernstein_field_expansion(learned_rmodel, 5, duration=test_t, deg_incr=0)
 bfe_start_set = reposition(bfe, target_region_u)
-end_set = get_final_region(bfe_start_set, 0.1)
+#end_set = get_final_region(bfe_start_set, 0.1)
 println(">>end set region: ", low(end_set), " - ", high(end_set))
-bernstein_expansion_ub = bfe.field_expansion_ub
-bernstein_expansion_lb = bfe.field_expansion_lb
 
+#bernstein_expansion_ub = bfe.field_expansion_ub
+#bernstein_expansion_lb = bfe.field_expansion_lb
+#u_test = [.5564253, .5628805]
 
-u_test = [0.6558247, 0.7012]
+bernstein_expansion_ub = bfe_start_set.field_expansion_ub
+bernstein_expansion_lb = bfe_start_set.field_expansion_lb
+u_test = [0.0, 0.0]
 
-t_dur = 0.1
+#t_dur = 0.05
+t_dur = 1.0
 t_pts = 100
 t_ls = range(0, t_dur, t_pts)
 input = ones(t_pts, 3)
@@ -70,13 +80,27 @@ for (k, t) in enumerate(t_ls)
     euler_vals[:, k] = u_test_f
 end
 
+#println("DIM: ", i, " Lower bound over t: ", lower_bound(bernstein_expansion_lb[i]))
+
+facet_expansion_lb = decasteljau(bernstein_expansion_lb[1], dim=(1+1), xi=0.0)
+println("time edge lb: ", lower_bound(facet_expansion_lb))
+space_bern_lb = decasteljau(facet_expansion_lb, dim=1, xi=1.0)
+println("Facet lower bound D1: ", lower_bound(space_bern_lb))
+
+space_bern_lb = decasteljau(bernstein_expansion_lb[1], dim=1, xi=test_t)
+facet_expansion_lb = decasteljau(space_bern_lb, dim=(1), xi=0.0)
+println("Facet lower bound D1: ", lower_bound(facet_expansion_lb))
+
 for i in 1:D
     expansion_vals_ub = bernstein_expansion_ub[i](input)
     expansion_vals_lb = bernstein_expansion_lb[i](input)
 
+    println("DIM: ", i, " Lower bound over t: ", lower_bound(bernstein_expansion_lb[i]))
+    #lower_bound
+
     #plt = plot(t_ls, euler_vals[i, :], label="euler")
-    #plot!(plt, t_ls, expansion_vals_ub, label="expansion")
-    #plot!(plt, t_ls, expansion_vals_lb, label="expansion")
+    #plot!(plt, t_ls, expansion_vals_ub, label="expansion_upper")
+    #plot!(plt, t_ls, expansion_vals_lb, label="expansion_lower")
     plt = plot(t_ls, euler_vals[i, :], label=nothing)
     plot!(plt, t_ls, expansion_vals_ub, label=nothing)
     plot!(plt, t_ls, expansion_vals_lb, label=nothing)

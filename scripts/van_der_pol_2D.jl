@@ -11,8 +11,8 @@ plotly()
 
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
-target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.3, 0.3])
-duration = 3.5
+target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.4, 0.4])
+duration = 3.15
 vp_deg = 5 # Volume polynomial degree
 
 
@@ -33,18 +33,39 @@ learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 #learned_rmodel_x = to_state_space_model(dtf, learned_rmodel)
 target_region_u = Rx_to_Ru(dtf, target_region)
 
+### TEST
+#target_region_u = Hyperrectangle(low=[0.5564252697664893, 0.5628805173789195], high=[0.7863510709052677, 0.7904654471020098])
+#target_region_u = Hyperrectangle(low=[0.5558629902178214, 0.5624853257907159], high=[0.7862882641569429, 0.7904350215573519])
+#duration = 0.0501
+### 
+
 #println("target region: ", target_region_u)
-println("init set region: ", low(target_region_u), " - ", high(target_region_u))
+#println("init set region: ", low(target_region_u), " - ", high(target_region_u))
 
 #flow_pipe = compute_taylor_reach_sets(learned_rmodel; init_set=target_region_u, duration=duration, eval_fcn=log_eval)
 #plot(flow_pipe, vars=(1,2))
 
-flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=5, Δt_max=0.10, deg_incr=30)
-flow_pipe_end_sets = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=5, Δt_max=0.10, deg_incr=20, return_transition_sets=false)
+deg_incr = 20
+Δt_max = 0.01
+expansion_deg = 5
+println("FLOW PIPE")
+flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr)
+println("FLOW PIPE END SETS")
+flow_pipe_end_sets = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr, return_transition_sets=false)
 
-#plt_fp = plot_2D_flowpipe(flow_pipe)
-plt_fp = plot_2D_flowpipe(flow_pipe_end_sets)
+#println("TRANSITION SETS:")
+#for ts in flow_pipe.transition_sets
+#    println(" - " , low(ts.set), " - ", high(ts.set))
+#end
+#println("penultimate trn set - " , low(flow_pipe.transition_sets[end-1].set), " - ", high(flow_pipe.transition_sets[end-1].set))
+#println("penultimate end set - " , low(flow_pipe_end_sets.transition_sets[end-1].set), " - ", high(flow_pipe_end_sets.transition_sets[end-1].set))
+#println("   ultimate trn set - " , low(flow_pipe.transition_sets[end].set), " - ", high(flow_pipe.transition_sets[end].set))
+#println("   ultimate end set - " , low(flow_pipe_end_sets.transition_sets[end].set), " - ", high(flow_pipe_end_sets.transition_sets[end].set))
+
+plt_fp = plot_2D_flowpipe(flow_pipe)
 plt_fp = plot_2D_region(plt_fp, target_region_u)
+plt_end_sets = plot_2D_flowpipe(flow_pipe_end_sets)
+plt_end_sets = plot_2D_region(plt_end_sets, target_region_u)
 #display(plt_fp)
 
 ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
@@ -66,8 +87,9 @@ upper_bounds = high(target_region_u)
 
 x_trajs = []
 x_traj_init_states = lower_bounds' .+ rand(n_val_traj, 2) .* (upper_bounds - lower_bounds)'
+x_traj_init_states[end, :] = [.5564253, .5628805]
 for i in 1:n_val_traj
-    x_traj = propagate_sample_traj(x_traj_init_states[i, :], duration, learned_rmodel)
+    x_traj = propagate_sample_traj(x_traj_init_states[i, :], duration, learned_rmodel, n_timesteps=500)
     push!(x_trajs, x_traj)
 end
 
@@ -83,10 +105,11 @@ plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
 
 for x_traj in x_trajs
     plot!(plt_fp, x_traj[:, 1], x_traj[:, 2], label=nothing)
+    plot!(plt_end_sets, x_traj[:, 1], x_traj[:, 2], label=nothing)
 end
 
 
-plot(plt_fp, plt_vp_prob, layout=(1,2), size=(1200, 400))
+plot(plt_fp, plt_end_sets, plt_vp_prob, layout=(1,3), size=(1200, 400))
 
 #u1_ls = range(0.01, 0.99, length=20)
 #u2_ls = range(0.01, 0.99, length=20)

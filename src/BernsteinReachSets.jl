@@ -30,16 +30,17 @@ end
 
 function reposition(bfe::BernsteinFieldExpansion{T, tD}, new_region::Hyperrectangle) where {T, tD}
     D = tD -1
-    new_lb = Vector{BernsteinPolynomial{T, tD}}(undef, D)
-    new_ub = Vector{BernsteinPolynomial{T, tD}}(undef, D)
+
+    new_lb = deepcopy(bfe.field_expansion_lb)
+    new_ub = deepcopy(bfe.field_expansion_ub)
 
     mins = low(new_region)
     maxes = high(new_region)
 
     for i in 1:D
-        for i in 1:D
-            new_lb[i] = affine_transform(bfe.field_expansion_lb[i], dim=(i+1), lower=mins[i], upper=maxes[i])
-            new_ub[i] = affine_transform(bfe.field_expansion_ub[i], dim=(i+1), lower=mins[i], upper=maxes[i])
+        for j in 1:D
+            new_lb[i] = affine_transform(new_lb[i], dim=(j+1), lower=mins[j], upper=maxes[j])
+            new_ub[i] = affine_transform(new_ub[i], dim=(j+1), lower=mins[j], upper=maxes[j])
         end
     end
     return BernsteinFieldExpansion{T, tD}(new_lb, new_ub, bfe.duration, new_region)
@@ -50,13 +51,24 @@ function get_final_region(bfe::BernsteinFieldExpansion{T, tD}, t::Float64=nothin
     t_eval = isnothing(t) ? bfe.duration : t
     mins = []
     maxes = []
+
+    #region_mins = low(bfe.region)
+    #region_maxes = high(bfe.region)
+
     for i in 1:D
-        # Evaluate the Bernstein-Taylor expansions at the desired time
-        space_bern_lb = decasteljau(bfe.field_expansion_lb[i], dim=1, xi=t_eval)
-        space_bern_ub = decasteljau(bfe.field_expansion_ub[i], dim=1, xi=t_eval)
+        # Evaluate the Expansion at the edge of the region
+        facet_expansion_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=0.0)
+        facet_expansion_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=1.0)
+
+        # Evaluate the Bernstein-Taylor expansions at the final time (BFE is already scaled to its duration, so 1.0 corresponds to the end of the duration)
+        space_bern_lb = decasteljau(facet_expansion_lb, dim=1, xi=1.0)
+        space_bern_ub = decasteljau(facet_expansion_ub, dim=1, xi=1.0)
+        #space_bern_lb = decasteljau(bfe.field_expansion_lb[i], dim=1, xi=t_eval)
+        #space_bern_ub = decasteljau(bfe.field_expansion_ub[i], dim=1, xi=t_eval)
 
         push!(mins, lower_bound(space_bern_lb))
         push!(maxes, upper_bound(space_bern_ub))
+        #println("FINAL REGION lb: ",lower_bound(space_bern_lb), " ub: ",upper_bound(space_bern_ub), "time deg: ", deg(bfe.field_expansion_lb[i])[1])
     end
     #println("FINAL REGION lows: ", mins, " high: ", maxes)
     return Hyperrectangle(low=mins, high=maxes)
@@ -66,11 +78,24 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
     D = tD -1
     mins = []
     maxes = []
+
+    #region_mins = low(bfe.region)
+    #region_maxes = high(bfe.region)
+
     for i in 1:D
-        # Bound the expansion over the whole region and time interval
-        push!(mins, lower_bound(bfe.field_expansion_lb[i]))
-        push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
+        # Evaluate the Expansion at the edge of the region
+        facet_expansion_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=0.0)
+        facet_expansion_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=1.0)
+
+        # Bound the expansion over the whole region facet and time interval
+        push!(mins, lower_bound(facet_expansion_lb))
+        push!(maxes, upper_bound(facet_expansion_ub))
+        #push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
+        #push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
+
+        #println("TRANS REGION lb: ",lower_bound(bfe.field_expansion_lb[i]), " ub: ",upper_bound(bfe.field_expansion_ub[i]), "time deg: ", deg(bfe.field_expansion_lb[i])[1])
     end
+    #println("mins: ", mins, " maxes: ", maxes)
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 
@@ -87,20 +112,45 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
     while total_time < duration
         #println("\nITER")
         #println("bfe region: ", low(bfe.region), " - ", high(bfe.region))
+        #println("start set region: ", low(start_set), " - ", high(start_set))
         bfe_start_set = reposition(bfe, start_set)
+        
+        ## TEST
+        #region_mins = low(bfe.region)
+        #region_maxes = high(bfe.region)
+        #facet_expansion_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=region_mins[i])
+        #facet_expansion_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=region_maxes[i])
+        #space_bern_lb = decasteljau(facet_expansion_lb, dim=1, xi=t_eval)
+        #space_bern_ub = decasteljau(facet_expansion_ub, dim=1, xi=t_eval)
+
+        #println("input dur: ", bfe_start_set.duration)
+        #lower_d1 = bfe_start_set.field_expansion_lb[1]
+        #upper_d1 = bfe_start_set.field_expansion_ub[1]
+
+        #println("lower d1 @ pt: ", lower_d1([bfe_start_set.duration, 0.5577426, 0.7111302]))
+        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 0.5577426, 0.7111302]))
+        #println("lower d1 @ pt: ", lower_d1([bfe_start_set.duration, 0.0, 0.0]))
+        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 0.0, 0.0]))
+        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 1.0, 1.0]))
+        ###
+
         trans_region = get_transition_region(bfe_start_set)
         end_set = get_final_region(bfe_start_set, trans_region.duration)
         #println("duration: ", trans_region.duration)
         #println("total_time: ", total_time)
-        #println("start set region: ", low(start_set), " - ", high(start_set))
-        #println("end set region: ", low(end_set), " - ", high(end_set))
-        #println("trn set region: ", low(trans_region.set), " - ", high(trans_region.set))
-        #readline()
 
         # Clamp set to domain
+        trans_region_clamp_low = max.(low(trans_region.set), zeros(Float64, D))
+        trans_region_clamp_high = min.(high(trans_region.set), ones(Float64, D))
+        trans_region = TransitionSet(Hyperrectangle(low=trans_region_clamp_low, high=trans_region_clamp_high), trans_region.duration)
         end_set_clamp_low = max.(low(end_set), zeros(Float64, D))
         end_set_clamp_high = min.(high(end_set), ones(Float64, D))
         end_set = Hyperrectangle(low=end_set_clamp_low, high=end_set_clamp_high)
+
+
+        #println("end set region: ", low(end_set), " - ", high(end_set))
+        #println("trn set region: ", low(trans_region.set), " - ", high(trans_region.set))
+        #readline()
 
         if return_transition_sets
             push!(trans_sets, trans_region)
@@ -168,7 +218,7 @@ function create_field_bound_polys(degree::Int, next_coeff_vec::Vector{BernsteinP
     ub = upper_bound.(next_coeff_vec, region)
     field_bound_polys = []
     for i in 1:D
-        bound_poly_coeffs = zeros(FLoat64, degree + 2)
+        bound_poly_coeffs = zeros(Float64, degree + 2)
         bound_poly_coeffs[end] = ub[i] / factorial(degree + 1)
         push!(field_bound_polys, TemporalPoly(degree + 1, bound_poly_coeffs))
     end
