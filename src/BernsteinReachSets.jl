@@ -46,31 +46,28 @@ function reposition(bfe::BernsteinFieldExpansion{T, tD}, new_region::Hyperrectan
     return BernsteinFieldExpansion{T, tD}(new_lb, new_ub, bfe.duration, new_region)
 end
 
-function get_final_region(bfe::BernsteinFieldExpansion{T, tD}, t::Float64=nothing) where {T, tD}
+function get_final_region(bfe::BernsteinFieldExpansion{T, tD}, t::Union{Float64, Nothing}=nothing) where {T, tD}
     D = tD -1
-    t_eval = isnothing(t) ? bfe.duration : t
+
+    if !isnothing(t)
+        error("Not implemented yet")
+    end
+
     mins = []
     maxes = []
 
-    #region_mins = low(bfe.region)
-    #region_maxes = high(bfe.region)
-
     for i in 1:D
         # Evaluate the Expansion at the edge of the region
-        facet_expansion_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=0.0)
-        facet_expansion_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=1.0)
+        facet_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=0.0)
+        facet_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=1.0)
 
         # Evaluate the Bernstein-Taylor expansions at the final time (BFE is already scaled to its duration, so 1.0 corresponds to the end of the duration)
-        space_bern_lb = decasteljau(facet_expansion_lb, dim=1, xi=1.0)
-        space_bern_ub = decasteljau(facet_expansion_ub, dim=1, xi=1.0)
-        #space_bern_lb = decasteljau(bfe.field_expansion_lb[i], dim=1, xi=t_eval)
-        #space_bern_ub = decasteljau(bfe.field_expansion_ub[i], dim=1, xi=t_eval)
+        space_facet_lb = decasteljau(facet_lb, dim=1, xi=1.0)
+        space_facet_ub = decasteljau(facet_ub, dim=1, xi=1.0)
 
-        push!(mins, lower_bound(space_bern_lb))
-        push!(maxes, upper_bound(space_bern_ub))
-        #println("FINAL REGION lb: ",lower_bound(space_bern_lb), " ub: ",upper_bound(space_bern_ub), "time deg: ", deg(bfe.field_expansion_lb[i])[1])
+        push!(mins, lower_bound(space_facet_lb))
+        push!(maxes, upper_bound(space_facet_ub))
     end
-    #println("FINAL REGION lows: ", mins, " high: ", maxes)
     return Hyperrectangle(low=mins, high=maxes)
 end
 
@@ -78,9 +75,6 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
     D = tD -1
     mins = []
     maxes = []
-
-    #region_mins = low(bfe.region)
-    #region_maxes = high(bfe.region)
 
     for i in 1:D
         # Evaluate the Expansion at the edge of the region
@@ -90,12 +84,7 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
         # Bound the expansion over the whole region facet and time interval
         push!(mins, lower_bound(facet_expansion_lb))
         push!(maxes, upper_bound(facet_expansion_ub))
-        #push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
-        #push!(maxes, upper_bound(bfe.field_expansion_ub[i]))
-
-        #println("TRANS REGION lb: ",lower_bound(bfe.field_expansion_lb[i]), " ub: ",upper_bound(bfe.field_expansion_ub[i]), "time deg: ", deg(bfe.field_expansion_lb[i])[1])
     end
-    #println("mins: ", mins, " maxes: ", maxes)
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 
@@ -106,38 +95,12 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
     start_set = init_set 
     total_time = 0.0
 
-    #println("start set region: ", low(start_set), " - ", high(start_set))
-
     trans_sets = Vector{TransitionSet}()
     while total_time < duration
-        #println("\nITER")
-        #println("bfe region: ", low(bfe.region), " - ", high(bfe.region))
-        #println("start set region: ", low(start_set), " - ", high(start_set))
         bfe_start_set = reposition(bfe, start_set)
         
-        ## TEST
-        #region_mins = low(bfe.region)
-        #region_maxes = high(bfe.region)
-        #facet_expansion_lb = decasteljau(bfe.field_expansion_lb[i], dim=(i+1), xi=region_mins[i])
-        #facet_expansion_ub = decasteljau(bfe.field_expansion_ub[i], dim=(i+1), xi=region_maxes[i])
-        #space_bern_lb = decasteljau(facet_expansion_lb, dim=1, xi=t_eval)
-        #space_bern_ub = decasteljau(facet_expansion_ub, dim=1, xi=t_eval)
-
-        #println("input dur: ", bfe_start_set.duration)
-        #lower_d1 = bfe_start_set.field_expansion_lb[1]
-        #upper_d1 = bfe_start_set.field_expansion_ub[1]
-
-        #println("lower d1 @ pt: ", lower_d1([bfe_start_set.duration, 0.5577426, 0.7111302]))
-        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 0.5577426, 0.7111302]))
-        #println("lower d1 @ pt: ", lower_d1([bfe_start_set.duration, 0.0, 0.0]))
-        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 0.0, 0.0]))
-        #println("upper d1 @ pt: ", upper_d1([bfe_start_set.duration, 1.0, 1.0]))
-        ###
-
         trans_region = get_transition_region(bfe_start_set)
-        end_set = get_final_region(bfe_start_set, trans_region.duration)
-        #println("duration: ", trans_region.duration)
-        #println("total_time: ", total_time)
+        end_set = get_final_region(bfe_start_set)
 
         # Clamp set to domain
         trans_region_clamp_low = max.(low(trans_region.set), zeros(Float64, D))
@@ -147,19 +110,14 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
         end_set_clamp_high = min.(high(end_set), ones(Float64, D))
         end_set = Hyperrectangle(low=end_set_clamp_low, high=end_set_clamp_high)
 
-
-        #println("end set region: ", low(end_set), " - ", high(end_set))
-        #println("trn set region: ", low(trans_region.set), " - ", high(trans_region.set))
-        #readline()
-
         if return_transition_sets
             push!(trans_sets, trans_region)
         else
             push!(trans_sets, TransitionSet(end_set, trans_region.duration))
         end
-        #println("start set b4: ", low(start_set), " - ", high(start_set))
+        
+        # Update the start set to the end set of this iteration
         start_set = end_set
-        #println("start set af: ", low(start_set), " - ", high(start_set))
         total_time += trans_region.duration
     end
 
@@ -233,7 +191,6 @@ function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}
     taylor_scaled_coeffs = [duration_scaled_t_coeffs[i] * sol_poly.spatio_vector_field_coeffs[:, i] for i in 1:(degree + 1)] # Converts into scaled vector of vectors
 
     # Append the bound poly
-    #ub_mag = max.(abs.(upper_bound.(nxt_coeff_vec)), abs.(lower_bound.(nxt_coeff_vec)))
     if upper
         ub = upper_bound.(nxt_coeff_vec)
         bound_spatio_vector_field = ones(BernsteinPolynomial{T, D}, D) .* ub * duration^(degree + 1) / factorial(degree + 1)
@@ -241,15 +198,12 @@ function create_bernstein_expansion(model::SystemModel{BernsteinPolynomial{T, D}
         lb = lower_bound.(nxt_coeff_vec)
         bound_spatio_vector_field = ones(BernsteinPolynomial{T, D}, D) .* lb * duration^(degree + 1) / factorial(degree + 1)
     end
-    #println("upper bound: ", ub)
-    #println("upper bound mag: ", ub_mag)
 
     push!(taylor_scaled_coeffs, bound_spatio_vector_field)
 
     # Bernsteinify the scaled coefficients to get a Bernstein polynomial in space and time
     bernstein_time_coeffs = bernsteinify(taylor_scaled_coeffs, deg_incr)
     time_degree = length(bernstein_time_coeffs) - 1
-
 
     # Convert to proper Bernstein polynomial type
     bernstein_expansions = Vector{BernsteinPolynomial{T, D+1}}(undef, D)
@@ -284,17 +238,10 @@ function bernsteinify(coefficients::Vector{Vector{BernsteinPolynomial{T, D}}}, d
     n = length(coefficients) - 1 # Original degree of monomial basis
     m = n + deg_incr # Degree of Bernstein representation
     
-    #lg = [lgamma(i) for i in 0:(m+1)]
-
-    #bern_coeffs = zeros(eltype(coefficients), m + 1) 
     bern_coeffs = [zeros(BernsteinPolynomial{T, D}, D) for _ in 1:(m+1)]
     for i in 0:m
         for k in 0:min(i, n)
-            #bern_coeffs[i+1] += coefficients[k + 1] * binomial(i, k) / binomial(m, k)
             bern_coeffs[i+1] = bern_coeffs[i+1] .+ coefficients[k + 1] * binomial(i, k) / binomial(m, k)
-            #println("k+1: ", k+1, " af shape: ", size(bern_coeffs[i+1][1].coeffs), " coeffs size: ", size(coefficients[k + 1][1].coeffs))
-            #println("new bernie: ", bern_coeffs[i+1][1].coeffs)
-            #readline()
         end
     end
     return bern_coeffs

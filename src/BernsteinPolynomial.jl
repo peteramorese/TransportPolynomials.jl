@@ -294,7 +294,7 @@ function to_mv_polynomial(p::BernsteinPolynomial{T, D}, x_vars::Vector) where {T
         if coeff == 0
             continue
         end
-        idxs = Tuple(I) .- 1   # multi-index (i₁,…,i_D)
+        idxs = Tuple(I) .- 1   # multi-index 
 
         # expand this tensor-product Bernstein basis element
         terms = Dict{NTuple{D,Int},T}((ntuple(_->0,D)) => coeff)
