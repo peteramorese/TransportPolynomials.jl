@@ -10,7 +10,7 @@ plotly()
 #pyplot()
 
 # Specifications
-true_system, dtf = van_der_pol(μ=1.0)
+true_system, dtf = cartpole()
 target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.4, 0.4])
 duration = 0.45
 vp_deg = 5 # Volume polynomial degree

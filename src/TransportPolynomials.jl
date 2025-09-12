@@ -60,7 +60,7 @@ export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_
 export generate_data, x_data_to_u_data, constrained_poly_regression, constrained_system_regression
 
 # Systems
-export van_der_pol
+export van_der_pol, cartpole
 
 # Euler
 export propagate_sample, propagate_sample_traj
