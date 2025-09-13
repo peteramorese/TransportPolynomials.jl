@@ -1,6 +1,8 @@
-
-function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
-    Δt = t_duration / n_timesteps
+"""
+Compute the final desination of a state subject to a field
+"""
+function propagate_sample(x_eval::Vector{Float64}, duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
+    Δt = duration / n_timesteps
 
     multiplier = 1 
     if !forward 
@@ -13,8 +15,11 @@ function propagate_sample(x_eval::Vector{Float64}, t_duration::Float64, model::S
     return x_eval
 end
 
-function propagate_sample_traj(x_eval::Vector{Float64}, t_duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
-    Δt = t_duration / n_timesteps
+"""
+Return the Euler-integration trajectory of a sample
+"""
+function propagate_sample_traj(x_eval::Vector{Float64}, duration::Float64, model::SystemModel; n_timesteps::Int=100, forward::Bool=true)
+    Δt = duration / n_timesteps
 
     multiplier = 1 
     if !forward 

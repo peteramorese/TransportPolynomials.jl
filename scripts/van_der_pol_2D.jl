@@ -11,8 +11,8 @@ plotly()
 
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
-target_region = Hyperrectangle(low=[0.2, 0.2], high=[0.4, 0.4])
-duration = 0.45
+target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.4, 0.4])
+duration = 1.15
 vp_deg = 5 # Volume polynomial degree
 
 
@@ -36,39 +36,22 @@ deg_incr = 20
 expansion_deg = 5
 flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr)
 
-plt_fp = plot_2D_flowpipe(flow_pipe)
-plt_fp = plot_2D_region(plt_fp, target_region_u)
-
-ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
+box_ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 tamed_ts = create_tamed_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 
-# Sample trajectories from the system to validate the reach sets
-n_val_traj = 20
-lower_bounds = low(target_region_u)
-upper_bounds = high(target_region_u)
+# Compute monte carlo eval
+euler_prob_traj, timestamps = euler_probability_traj(target_region_u, duration, forward_model=-learned_rmodel, n_samples=1000, n_timesteps=4)
 
-x_trajs = []
-x_traj_init_states = lower_bounds' .+ rand(n_val_traj, 2) .* (upper_bounds - lower_bounds)'
-x_traj_init_states[end, :] = [.5564253, .5628805]
-for i in 1:n_val_traj
-    x_traj = propagate_sample_traj(x_traj_init_states[i, :], duration, learned_rmodel, n_timesteps=500)
-    push!(x_trajs, x_traj)
-end
+# Plot the flowpipe
+plt_fp = plot()
+plt_fp = plot_flowpipe!(plt_fp, flow_pipe; color=:teal, alpha=0.0)
+plt_fp = plot_2D_region!(plt_fp, target_region_u; color=:red)
 
 # Plot the probability functions
-n_pts = 100
-plt_vp_prob = plot()
-t_pts = range(0.0, duration, length=n_pts)
-ts_pts = [ts(t) for t in t_pts]
-tamed_ts_pts = [tamed_ts(t) for t in t_pts]
-plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
-plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
-hline!(plt_vp_prob, [0.0, 1.0], linestyle=:dash)
+plt_prob = plot()
+plt_prob = plot_taylor_spline!(plt_prob, box_ts, duration, label="Box TS", color=:blue)
+plt_prob = plot_taylor_spline!(plt_prob, tamed_ts, duration, label="Tamed TS", color=:coral)
+plt_prob = plot(plt_prob, timestamps, euler_prob_traj, label="MC (learned)", color=:red)
+hline!(plt_prob, [0.0, 1.0], linestyle=:dash, color=:black, label=nothing)
 
-for x_traj in x_trajs
-    plot!(plt_fp, x_traj[:, 1], x_traj[:, 2], label=nothing)
-    plot!(plt_end_sets, x_traj[:, 1], x_traj[:, 2], label=nothing)
-end
-
-
-plot(plt_fp, plt_end_sets, plt_vp_prob, layout=(1,3), size=(1200, 400), legend=false)
+plot(plt_fp, plt_prob, layout=(1,3), size=(1200, 400))

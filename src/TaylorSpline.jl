@@ -45,18 +45,20 @@ function create_box_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_p
 
     segments = []
 
-    for (k, ts) in enumerate(flow_pipe.transition_sets)
-        segment_duration = ts.duration
-        R = ts.set
+    for k in 1:length(flow_pipe.transition_sets)
+        trans_set = flow_pipe.transition_sets[k]
+        start_set = flow_pipe.start_sets[k]
 
-        integ_poly = create_integ_poly(vol_poly, R)
+        segment_duration = trans_set.duration
+
+        integ_poly = create_integ_poly(vol_poly, start_set)
 
         if rebound_each_segment
-            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, R) 
+            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, trans_set.set) 
         end
 
         volume_function = integ_poly + bound_poly
-        push!(segments, TaylorSplineSegment{TemporalPoly}(R, segment_duration, volume_function))
+        push!(segments, TaylorSplineSegment{TemporalPoly}(trans_set.set, segment_duration, volume_function))
     end
     return TaylorSpline{TemporalPoly}(segments)
 end
@@ -73,19 +75,25 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
 
     prev_vf = TemporalPoly(vol_poly_degree + 1, [Inf for _ in 1:(vol_poly_degree + 2)])
 
-    for (k, ts) in enumerate(flow_pipe.transition_sets)
-        segment_duration = ts.duration
-        R = ts.set
+    # Calculate the upper bounds of the nxt coeff for all transition sets and use that for the bound poly
+    trans_set_upper_bounds = [upper_bound(nxt_coeff, trans_set.set) for trans_set in flow_pipe.transition_sets]
+    bound_poly_coeffs = zeros(Float64, vol_poly_degree + 2) # Add one since the bound poly is degree + 1
+    bound_poly_coeffs[end] = maximum(trans_set_upper_bounds) / factorial(vol_poly_degree + 1)
+    bound_poly = TemporalPoly(vol_poly_degree + 1, bound_poly_coeffs)
+
+    for k in 1:length(flow_pipe.transition_sets)
+        trans_set = flow_pipe.transition_sets[k]
+        R = flow_pipe.start_sets[k]
+
+        segment_duration = trans_set.duration
 
         # Calculate the volume rates of change over R
         roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
 
         if rebound_each_segment
-            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, R) 
             roc_infemums = [lower_bound(coeff, R) for coeff in vol_poly.spatio_coeffs]
         end
 
-        
         # (upper bound) prediction of Ω volume using the previous volume function and the end of its duration
         if k > 1
             pred_Ω_volume = prev_vf(segments[end].duration)
@@ -114,7 +122,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         prev_vf = tamed_volume_function
 
         tamed_volume_function_cpy = TemporalPoly(tamed_volume_function.deg, copy(tamed_volume_function.coeffs))
-        push!(segments, TaylorSplineSegment{TemporalPoly}(R, segment_duration, tamed_volume_function_cpy))
+        push!(segments, TaylorSplineSegment{TemporalPoly}(trans_set.set, segment_duration, tamed_volume_function_cpy))
     end
     return TaylorSpline{TemporalPoly}(segments)
 end

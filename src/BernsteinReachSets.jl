@@ -15,6 +15,7 @@ end
 
 struct Flowpipe
     transition_sets::Vector{TransitionSet}
+    start_sets::Vector{Hyperrectangle}
 end
 
 function rescale_duration(bfe::BernsteinFieldExpansion{T, tD}, new_duration::Float64) where {T, tD}
@@ -88,7 +89,7 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 
-function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, D}}, init_set::Hyperrectangle, duration::Float64; expansion_degree::Int=4, Δt_max::Float64=1.0, deg_incr::Int=0, return_transition_sets::Bool=true) where {T, D}
+function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, D}}, init_set::Hyperrectangle, duration::Float64; expansion_degree::Int=4, Δt_max::Float64=1.0, deg_incr::Int=0) where {T, D}
     # Create the original field expansion
     bfe = create_bernstein_field_expansion(model, expansion_degree, duration=Δt_max, deg_incr=deg_incr)
 
@@ -96,6 +97,8 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
     total_time = 0.0
 
     trans_sets = Vector{TransitionSet}()
+    start_sets = Vector{Hyperrectangle}()
+    push!(start_sets, init_set)
     while total_time < duration
         bfe_start_set = reposition(bfe, start_set)
         
@@ -110,18 +113,15 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
         end_set_clamp_high = min.(high(end_set), ones(Float64, D))
         end_set = Hyperrectangle(low=end_set_clamp_low, high=end_set_clamp_high)
 
-        if return_transition_sets
-            push!(trans_sets, trans_region)
-        else
-            push!(trans_sets, TransitionSet(end_set, trans_region.duration))
-        end
+        push!(trans_sets, trans_region)
+        push!(start_sets, end_set)
         
         # Update the start set to the end set of this iteration
         start_set = end_set
         total_time += trans_region.duration
     end
 
-    return Flowpipe(trans_sets)
+    return Flowpipe(trans_sets, start_sets)
 end
 
 function lie_derivative(p_field::Vector{BernsteinPolynomial{T, D}}, time_diff_field::Vector{BernsteinPolynomial{T, D}}) where {T, D}

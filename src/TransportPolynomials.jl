@@ -25,7 +25,6 @@ import ReachabilityAnalysis as RA
 include("BernsteinPolynomial.jl")
 include("DataStructures.jl")
 include("BernsteinReachSets.jl")
-include("Visualizaton.jl")
 include("DistributionTransform.jl")
 include("SystemRegression.jl")
 include("Systems.jl")
@@ -37,6 +36,7 @@ include("Probability.jl")
 #include("PicardIteration.jl")
 include("ReachableSets.jl")
 include("TaylorSpline.jl")
+include("Visualizaton.jl")
 
 # DataStructures
 export SystemModel, dimension, SpatioTemporalPoly
@@ -48,10 +48,7 @@ export BernsteinPolynomial, deg, dimension, decasteljau, log_eval, differentiate
 export create_bernstein_expansion, create_bernstein_field_expansion, compute_bernstein_reach_sets, reposition, get_final_region
 
 # Visualization
-export plot_data, plot_polynomial_surface, plot_2D_pdf, 
-    plot_2D_erf_space_pdf, plot_2D_region, plot_2D_region_in_3D, plot_2D_pdf, plot_2D_erf_space_vf,
-    plot_vol_poly_density_vs_time, plot_euler_density_vs_time, plot_integ_poly_prob_vs_time,
-    plot_euler_mc_prob_vs_time, plot_2D_reachable_sets, plot_2D_flowpipe
+export plot_2D_region!, plot_taylor_spline!, plot_flowpipe!
 
 # DistributionTransform
 export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_state_space_model, to_u_space_model
@@ -63,7 +60,7 @@ export generate_data, x_data_to_u_data, constrained_poly_regression, constrained
 export van_der_pol, cartpole
 
 # Euler
-export propagate_sample, propagate_sample_traj
+export euler_density, euler_probability, euler_probability_traj
 
 # VolumePolynomial
 export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff 

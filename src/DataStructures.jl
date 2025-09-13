@@ -23,6 +23,11 @@ function (model::SystemModel{P})(x::AbstractMatrix{S}) where {P, S}
     return mat
 end
 
+function -(model::SystemModel{P}) where {P}
+    new_f = deepcopy(model.f)
+    return SystemModel(-new_f)
+end
+
 function dimension(model::SystemModel)
     return length(model.f)
 end
