@@ -76,10 +76,10 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
     prev_vf = TemporalPoly(vol_poly_degree + 1, [Inf for _ in 1:(vol_poly_degree + 2)])
 
     # Calculate the upper bounds of the nxt coeff for all transition sets and use that for the bound poly
-    trans_set_upper_bounds = [upper_bound(nxt_coeff, trans_set.set) for trans_set in flow_pipe.transition_sets]
-    bound_poly_coeffs = zeros(Float64, vol_poly_degree + 2) # Add one since the bound poly is degree + 1
-    bound_poly_coeffs[end] = maximum(trans_set_upper_bounds) / factorial(vol_poly_degree + 1)
-    bound_poly = TemporalPoly(vol_poly_degree + 1, bound_poly_coeffs)
+    #trans_set_upper_bounds = [upper_bound(nxt_coeff, trans_set.set) for trans_set in flow_pipe.transition_sets]
+    #bound_poly_coeffs = zeros(Float64, vol_poly_degree + 2) # Add one since the bound poly is degree + 1
+    #bound_poly_coeffs[end] = maximum(trans_set_upper_bounds) / factorial(vol_poly_degree + 1)
+    #bound_poly = TemporalPoly(vol_poly_degree + 1, bound_poly_coeffs)
 
     for k in 1:length(flow_pipe.transition_sets)
         trans_set = flow_pipe.transition_sets[k]
@@ -91,6 +91,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
 
         if rebound_each_segment
+            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, trans_set.set)
             roc_infemums = [lower_bound(coeff, R) for coeff in vol_poly.spatio_coeffs]
         end
 

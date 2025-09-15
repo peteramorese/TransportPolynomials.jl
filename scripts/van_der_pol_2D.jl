@@ -12,8 +12,8 @@ plotly()
 # Specifications
 true_system, dtf = van_der_pol(μ=1.0)
 target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.4, 0.4])
-duration = 1.15
-vp_deg = 5 # Volume polynomial degree
+duration = 2.15
+vp_deg = 8 # Volume polynomial degree
 
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
@@ -31,8 +31,8 @@ learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
 
 target_region_u = Rx_to_Ru(dtf, target_region)
 
-deg_incr = 20
-Δt_max = 0.1
+deg_incr = 0
+Δt_max = 0.01
 expansion_deg = 5
 flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr)
 
