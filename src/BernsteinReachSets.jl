@@ -85,7 +85,12 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
         # Bound the expansion over the whole region facet and time interval
         push!(mins, lower_bound(facet_expansion_lb))
         push!(maxes, upper_bound(facet_expansion_ub))
+
+        if mins[end] > maxes[end]
+            error("Min value: ", mins[end], " is greater than max value: ", mins[end])
+        end
     end
+    println("mins: ", mins, " maxes: ", maxes)
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 

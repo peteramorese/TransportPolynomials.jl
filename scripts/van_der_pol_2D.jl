@@ -9,38 +9,34 @@ using StaticArrays
 plotly()
 #pyplot()
 
-# Specifications
+# Specifications #
 true_system, dtf = van_der_pol(μ=1.0)
 target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.4, 0.4])
 duration = 2.15
+model_degrees = 5 * ones(Int, dimension(true_system))
+fp_deg = 5
 vp_deg = 8 # Volume polynomial degree
+deg_incr = 0
+Δt_max = 0.01
+##################
 
 
 X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
 
-
 U, fu_hat = x_data_to_u_data(X, fx_hat, dtf)
 
-# Plot the data
-plt_x_data = quiver(X[:, 1], X[:, 2], quiver=(fx_hat[:, 1], fx_hat[:, 2]), title="X space data")
-plt_u_data = quiver(U[:, 1], U[:, 2], quiver=(fu_hat[:, 1], fu_hat[:, 2]), title="U space data")
-plot(plt_x_data, plt_u_data, layout=(1, 2))
-
 # System regression
-learned_rmodel = constrained_system_regression(U, fu_hat, [5, 5], reverse=true)
+learned_rmodel = constrained_system_regression(U, fu_hat, model_degrees, reverse=true)
 
 target_region_u = Rx_to_Ru(dtf, target_region)
 
-deg_incr = 0
-Δt_max = 0.01
-expansion_deg = 5
-flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=expansion_deg, Δt_max=Δt_max, deg_incr=deg_incr)
+flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=fp_deg, Δt_max=Δt_max, deg_incr=deg_incr)
 
 box_ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 tamed_ts = create_tamed_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 
 # Compute monte carlo eval
-euler_prob_traj, timestamps = euler_probability_traj(target_region_u, duration, forward_model=-learned_rmodel, n_samples=1000, n_timesteps=4)
+euler_prob_traj, timestamps = euler_probability_traj(target_region_u, duration, forward_model=-learned_rmodel, n_samples=1000, n_timesteps=100)
 
 # Plot the flowpipe
 plt_fp = plot()

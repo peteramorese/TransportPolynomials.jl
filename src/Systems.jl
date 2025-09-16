@@ -80,5 +80,5 @@ function cartpole(; mc::Float64=1.0, mp::Float64=0.1, l::Float64=0.5, g::Float64
         Normal(0.0, 0.01),
     ))
     
-    return sys
+    return sys, dtf
 end
