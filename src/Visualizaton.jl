@@ -1,7 +1,7 @@
 function plot_2D_region!(plt::Plots.Plot, region::Hyperrectangle{Float64}; vars::Tuple{Int, Int}=(1,2), alpha=0.5, color=:red, label="")
     if LazySets.dim(region) != 2
-        region_mins = low(trans_set)
-        region_maxes = high(trans_set)
+        region_mins = low(region)
+        region_maxes = high(region)
         region_2D = Hyperrectangle(low=[region_mins[vars[1]], region_mins[vars[2]]], high=[region_maxes[vars[1]], region_maxes[vars[2]]])
     else
         region_2D = region

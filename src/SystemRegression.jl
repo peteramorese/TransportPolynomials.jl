@@ -28,7 +28,7 @@ function x_data_to_u_data(X::Matrix{Float64}, fx_hat::Matrix{Float64}, dtf::Dist
     return U, fu_hat
 end
 
-function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f_hat_component::Vector{Float64}; degrees::Vector{Int})
+function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f_hat_component::Vector{Float64}; degrees::Vector{Int}, λ::Float64=0.0)
     n, D = size(U)
     @assert length(f_hat_component) == n "Number of data in U and f_hat must match"
 
@@ -43,8 +43,14 @@ function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f
 
     A = zeros(n, n_basis_functions)
 
-    log_S = log.(U)
-    log_1mS = log.(1 .- U)
+    log_U = log.(U)
+    log_1mU = log.(1 .- U)
+
+    log_safe = true
+    if any(isinf.(log_U)) | any(isinf.(log_1mU))
+        @warn("Log-infinite values encountered; regressing using direct calculations")
+        log_safe = false
+    end
 
     i = 1
     for I in CartesianIndices(free_coeffs_shape)
@@ -58,15 +64,28 @@ function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f
             deg = degrees[j]
 
             log_binom = lgamma(deg + 1) - lgamma(idx + 1) - lgamma(deg - idx + 1)
-            log_basis += log_binom .+ idx * log_S[:, j] .+ (deg - idx) * log_1mS[:, j]
+            if log_safe
+                log_basis += log_binom .+ idx * log_U[:, j] .+ (deg - idx) * log_1mU[:, j]
+            else
+                x_1mx_prod = (U[:, j] .^ idx) .* (1.0 .- U[:, j]) .^ (deg - idx)
+                log_basis += log_binom .+ log.(x_1mx_prod)
+            end
         end
         A[:, i] = exp.(log_basis)
         i += 1
     end
         
     # Least squares
-    free_coeffs = A \ f_hat_component
+    ATA = A' * A
+    ATf = A' * f_hat_component
+    if λ > 0
+        ATA += λ * I
+    end
+    free_coeffs = ATA \ ATf
+    #free_coeffs = A \ f_hat_component
     free_coeffs = reshape(free_coeffs, free_coeffs_shape)
+
+    #println("max coeff mag: ", maximum(abs.(free_coeffs)))
 
     indices = [j == constrained_dim ? (2:degrees[j]) : Colon() for j in 1:D]
 
@@ -75,7 +94,7 @@ function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f
     return BernsteinPolynomial{Float64, D}(coeffs)
 end
 
-function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64}, degrees::Vector{Int}; reverse::Bool=false)
+function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64}, degrees::Vector{Int}; reverse::Bool=false, λ::Float64=0.0)
     n, D = size(U)
     @assert size(f_hat, 1) == n "Number of data in U and f_hat must match"
     @assert size(f_hat, 2) == D "Dimension of f_hat must match dimension of U"
@@ -87,7 +106,7 @@ function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64
 
     f_polys = Vector{BernsteinPolynomial{Float64, D}}(undef, D)
     for i in 1:D
-        f_polys[i] = constrained_poly_regression(i, U, f_hat[:, i], degrees=degrees)
+        f_polys[i] = constrained_poly_regression(i, U, f_hat[:, i], degrees=degrees, λ=λ)
     end
     return SystemModel(f_polys)
 end

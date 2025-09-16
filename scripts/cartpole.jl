@@ -11,28 +11,32 @@ plotly()
 
 # Specifications #
 true_system, dtf = cartpole()
-target_region = Hyperrectangle(low=[0.0, 0.0, 0.0, 0.0], high=[0.4, 0.4, 0.4, 0.4])
+target_region = Hyperrectangle(low=[0.1, 0.05, 0.0, 0.0], high=[0.15, 0.07, 0.4, 0.4])
 duration = 1.0
 model_degrees = 5 * ones(Int, dimension(true_system))
 fp_deg = 3
 vp_deg = 3 # Volume polynomial degree
 deg_incr = 0
-Δt_max = 0.01
+Δt_max = 0.005
 ##################
 
 
-X, fx_hat = generate_data(true_system, 2000; domain_std=0.5, noise_std=0.01)
+X, fx_hat = generate_data(true_system, 20000; domain_std=0.5, noise_std=0.01)
 
 U, fu_hat = x_data_to_u_data(X, fx_hat, dtf)
 
+target_region_u = Rx_to_Ru(dtf, target_region)
+println("Target region in U: ", low(target_region_u), " - ", high(target_region_u))
+
 # System regression
-print("Regressing model...")
-learned_rmodel = constrained_system_regression(U, fu_hat, model_degrees, reverse=true)
+println("Regressing model...")
+learned_rmodel = constrained_system_regression(U, fu_hat, model_degrees, reverse=true, λ=10.0)
 println("Done!")
 
-target_region_u = Rx_to_Ru(dtf, target_region)
+max_coeffs = [maximum(abs.(fi.coeffs)) for fi in learned_rmodel.f]
+println("Maximum coeff magnitude: ", maximum(max_coeffs))
 
-print("Computing reachable sets...")
+println("Computing reachable sets...")
 flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, duration, expansion_degree=fp_deg, Δt_max=Δt_max, deg_incr=deg_incr)
 println("Done!")
 
