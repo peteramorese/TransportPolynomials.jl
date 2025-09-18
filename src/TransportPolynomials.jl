@@ -78,7 +78,7 @@ export picard_operator, picard_vol_poly
 export compute_taylor_reach_sets, to_mv_polynomial_system, compute_hyperrectangle
 
 # TaylorSpline
-export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_tamed_taylor_spline 
+export TaylorSplineSegment, TaylorSpline, create_box_taylor_spline, create_tamed_taylor_spline, create_geometric_taylor_spline 
 
 
 end

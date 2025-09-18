@@ -12,12 +12,12 @@ plotly()
 # Specifications #
 true_system, dtf = van_der_pol(μ=1.0)
 target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.4, 0.4])
-duration = 2.15
+duration = 2.0
 model_degrees = 5 * ones(Int, dimension(true_system))
 fp_deg = 5
-vp_deg = 8 # Volume polynomial degree
+vp_deg = 5 # Volume polynomial degree
 deg_incr = 0
-Δt_max = 0.01
+Δt_max = 0.05
 ##################
 
 
@@ -34,6 +34,7 @@ flow_pipe = compute_bernstein_reach_sets(learned_rmodel, target_region_u, durati
 
 box_ts = create_box_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 tamed_ts = create_tamed_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
+geo_ts = create_geometric_taylor_spline(flow_pipe, learned_rmodel, vp_deg)
 
 # Compute monte carlo eval
 euler_prob_traj, timestamps = euler_probability_traj(target_region_u, duration, forward_model=-learned_rmodel, n_samples=1000, n_timesteps=100)
@@ -47,6 +48,7 @@ plt_fp = plot_2D_region!(plt_fp, target_region_u; color=:red)
 plt_prob = plot()
 plt_prob = plot_taylor_spline!(plt_prob, box_ts, duration, label="Box TS", color=:blue)
 plt_prob = plot_taylor_spline!(plt_prob, tamed_ts, duration, label="Tamed TS", color=:coral)
+plt_prob = plot_taylor_spline!(plt_prob, geo_ts, duration, label="Geo TS", color=:green)
 plt_prob = plot(plt_prob, timestamps, euler_prob_traj, label="MC (learned)", color=:red)
 hline!(plt_prob, [0.0, 1.0], linestyle=:dash, color=:black, label=nothing)
 

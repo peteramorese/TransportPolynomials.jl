@@ -252,3 +252,16 @@ function bernsteinify(coefficients::Vector{Vector{BernsteinPolynomial{T, D}}}, d
     end
     return bern_coeffs
 end
+
+function bernsteinify(coefficients::Vector{Float64}, deg_incr::Int=0)
+    n = length(coefficients) - 1 # Original degree of monomial basis
+    m = n + deg_incr # Degree of Bernstein representation
+    
+    bern_coeffs = zeros(m + 1)
+    for i in 0:m
+        for k in 0:min(i, n)
+            bern_coeffs[i+1] = bern_coeffs[i+1] + coefficients[k + 1] * binomial(i, k) / binomial(m, k)
+        end
+    end
+    return bern_coeffs
+end

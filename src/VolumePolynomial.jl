@@ -47,13 +47,30 @@ function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}) w
 end
 
 function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}, trans_region::Hyperrectangle{Float64}; deg_incr::Int=0) where {T, D}
-    #ub = upper_bound(next_coeff, region)
-
-    # THIS IS WRONG: ITS NOT VOL OF TRANS (FIX)
     ub = volume(trans_region) * upper_bound(next_coeff, trans_region, deg_incr=deg_incr)
 
-    #println("Upper bound Bern: ", ub, " empirical: ", empirical_upper_bound(next_coeff, region), " deg incr ub: ", upper_bound(next_coeff, region, deg_incr=15))
     bound_poly_coeffs = zeros(Float64, degree + 2) # Add one since the bound poly is degree + 1
     bound_poly_coeffs[end] = ub / factorial(degree + 1)
     return TemporalPoly(degree + 1, bound_poly_coeffs)
+end
+
+"""
+Compute the formal error bound for a taylor expansion using the geometric series result
+
+Args:
+    t : time to evaluate at
+    degree : degree of the taylor expansion
+    next_coeff_upper_bound : upper bound of the (n+1) derivative over the region of interest
+    taylor_expansion_upper_bound : upper bound of the plain taylor expansion (without the bound poly term) over the duration
+"""
+function geometric_error_bound(t::Float64, degree::Int, next_coeff_upper_bound::Float64, taylor_expansion_upper_bound::Float64)
+    println("taylor_expansion_upper_bound: ", taylor_expansion_upper_bound)
+    @assert next_coeff_upper_bound ≥ 0.0
+
+    α = next_coeff_upper_bound * t^(degree + 1) / factorial(degree + 1)
+    if α ≥ 1.0
+        return 1.0
+    else
+        return taylor_expansion_upper_bound * (1.0 / (1.0 - α) - 1.0)
+    end
 end
