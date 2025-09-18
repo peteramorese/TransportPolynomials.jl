@@ -234,22 +234,54 @@ function product(p::BernsteinPolynomial{T, D}, q::BernsteinPolynomial{T, D}) whe
     return BernsteinPolynomial{work_t,D}(C)
 end
 
-function upper_bound(p::BernsteinPolynomial{T, D}) where {T, D}
+function upper_bound(p::BernsteinPolynomial{T, D}; deg_incr::Int=0) where {T, D}
+    if deg_incr > 0
+        curr_deg = deg(p)
+        incr_deg = curr_deg .+ deg_incr * ones(Int, D)
+        p_tf = increase_degree(p, tuple(incr_deg...))
+        return maximum(p_tf.coeffs)
+    end
     return maximum(p.coeffs)
 end
 
-function lower_bound(p::BernsteinPolynomial{T, D}) where {T, D}
+function lower_bound(p::BernsteinPolynomial{T, D}; deg_incr::Int=0) where {T, D}
+    if deg_incr > 0
+        curr_deg = deg(p)
+        incr_deg = curr_deg .+ deg_incr * ones(Int, D)
+        p_tf = increase_degree(p, tuple(incr_deg...))
+        return minimum(p_tf.coeffs)
+    end
     return minimum(p.coeffs)
 end
 
-function upper_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
+function upper_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}; deg_incr::Int=0) where {T, D}
     p_tf = affine_transform(p, region)
-    return upper_bound(p_tf)
+    return upper_bound(p_tf, deg_incr=deg_incr)
 end
 
-function lower_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
+function lower_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}; deg_incr::Int=0) where {T, D}
     p_tf = affine_transform(p, region)
-    return lower_bound(p_tf)
+    return lower_bound(p_tf, deg_incr=deg_incr)
+end
+
+function empirical_upper_bound(p::BernsteinPolynomial{T, D}, n_samples::Int=1000) where {T, D}
+    return empirical_upper_bound(p, Hyperrectangle(low=zeros(D), high=ones(D)), n_samples)
+end
+
+function empirical_lower_bound(p::BernsteinPolynomial{T, D}, n_samples::Int=1000) where {T, D}
+    return empirical_lower_bound(p, Hyperrectangle(low=zeros(D), high=ones(D)), n_samples)
+end
+
+function empirical_upper_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}, n_samples::Int=1000) where {T, D}
+    region_samples = sample_region(region, n_samples)
+    sample_values = p(region_samples)
+    return maximum(sample_values)
+end
+
+function empirical_lower_bound(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}, n_samples::Int=1000) where {T, D}
+    region_samples = sample_region(region, n_samples)
+    sample_values = p(region_samples)
+    return minimum(sample_values)
 end
 
 function affine_transform(p::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
@@ -430,7 +462,7 @@ function _transform_1d(coeffs_in::AbstractVector, a::Float64, b::Float64)
     
     current_coeffs = copy(intermediate_coeffs)
     
-    for k in 0:n
+    for k ∈ 0:n
         final_coeffs[n - k + 1] = current_coeffs[n - k + 1]
         for i in 1:(n - k)
             current_coeffs[i] = (1 - t) * current_coeffs[i] + t * current_coeffs[i+1]

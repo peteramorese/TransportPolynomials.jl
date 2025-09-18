@@ -46,8 +46,13 @@ function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}) w
     return TemporalPoly(degree + 1, bound_poly_coeffs)
 end
 
-function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}, region::Hyperrectangle{Float64}) where {T, D}
-    ub = upper_bound(next_coeff, region)
+function create_bound_poly(degree::Int, next_coeff::BernsteinPolynomial{T, D}, trans_region::Hyperrectangle{Float64}; deg_incr::Int=0) where {T, D}
+    #ub = upper_bound(next_coeff, region)
+
+    # THIS IS WRONG: ITS NOT VOL OF TRANS (FIX)
+    ub = volume(trans_region) * upper_bound(next_coeff, trans_region, deg_incr=deg_incr)
+
+    #println("Upper bound Bern: ", ub, " empirical: ", empirical_upper_bound(next_coeff, region), " deg incr ub: ", upper_bound(next_coeff, region, deg_incr=15))
     bound_poly_coeffs = zeros(Float64, degree + 2) # Add one since the bound poly is degree + 1
     bound_poly_coeffs[end] = ub / factorial(degree + 1)
     return TemporalPoly(degree + 1, bound_poly_coeffs)

@@ -63,7 +63,7 @@ function create_box_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_p
     return TaylorSpline{TemporalPoly}(segments)
 end
 
-function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_poly_degree::Int, rebound_each_segment::Bool=true)
+function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol_poly_degree::Int; rebound_each_segment::Bool=true, deg_incr::Int=0)
     vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, vol_poly_degree)
 
     if !rebound_each_segment
@@ -75,12 +75,6 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
 
     prev_vf = TemporalPoly(vol_poly_degree + 1, [Inf for _ in 1:(vol_poly_degree + 2)])
 
-    # Calculate the upper bounds of the nxt coeff for all transition sets and use that for the bound poly
-    #trans_set_upper_bounds = [upper_bound(nxt_coeff, trans_set.set) for trans_set in flow_pipe.transition_sets]
-    #bound_poly_coeffs = zeros(Float64, vol_poly_degree + 2) # Add one since the bound poly is degree + 1
-    #bound_poly_coeffs[end] = maximum(trans_set_upper_bounds) / factorial(vol_poly_degree + 1)
-    #bound_poly = TemporalPoly(vol_poly_degree + 1, bound_poly_coeffs)
-
     for k in 1:length(flow_pipe.transition_sets)
         trans_set = flow_pipe.transition_sets[k]
         R = flow_pipe.start_sets[k]
@@ -91,7 +85,7 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
 
         if rebound_each_segment
-            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, trans_set.set)
+            bound_poly = create_bound_poly(vol_poly_degree, nxt_coeff, trans_set.set, deg_incr=deg_incr)
             roc_infemums = [lower_bound(coeff, R) for coeff in vol_poly.spatio_coeffs]
         end
 
@@ -116,6 +110,8 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         end
 
         # Compute the current volume function coefficients at the end of time time span
+        println("adjusted roc: ", adjusted_roc)
+        println("pred roc: ", pred_roc)
         tamed_roc = min.(adjusted_roc, pred_roc)
         taylor_scales = [1/factorial(i) for i in 0:vol_poly_degree]
         tamed_vf_coeffs = tamed_roc .* taylor_scales

@@ -77,7 +77,7 @@ function cartpole(; mc::Float64=1.0, mp::Float64=0.1, l::Float64=0.5, g::Float64
         Normal(0.0, 0.5), 
         Normal(0.0, 0.1),
         Normal(0.1, 0.2),
-        Normal(0.0, 0.01),
+        Normal(0.5, 0.4),
     ))
     
     return sys, dtf

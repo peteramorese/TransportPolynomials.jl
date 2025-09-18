@@ -17,8 +17,7 @@ using ModelingToolkit
 using IntervalArithmetic
 using SpecialFunctions
 using FFTW
-#using Symbolics
-#using BellBruno
+using LoopVectorization
 
 import ReachabilityAnalysis as RA 
 

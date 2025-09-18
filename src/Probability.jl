@@ -37,11 +37,15 @@ function euler_probability_traj(region::Hyperrectangle{Float64}, duration::Float
     return count / n_samples, range(0.0, duration, n_timesteps)
 end
 
+function avg_fwd_state(duration::Float64; foward_model::SystemModel, n_timesteps::Int=100, n_samples::Int=1000)
+    
+end
+
 """
 Sample random points uniformly from a hyperrectangle. Returns (n_samples, D) matrix
 """
 function sample_region(region::Hyperrectangle{Float64}, n_samples::Int)
     lower_bounds = low(region)
     upper_bounds = high(region)
-    return lower_bounds' .+ rand(n_samples, 2) .* (upper_bounds - lower_bounds)'
+    return lower_bounds' .+ rand(n_samples, LazySets.dim(region)) .* (upper_bounds - lower_bounds)'
 end

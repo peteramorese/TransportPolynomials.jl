@@ -90,7 +90,6 @@ function get_transition_region(bfe::BernsteinFieldExpansion{T, tD}) where {T, tD
             error("Min value: ", mins[end], " is greater than max value: ", mins[end])
         end
     end
-    println("mins: ", mins, " maxes: ", maxes)
     return TransitionSet(Hyperrectangle(low=mins, high=maxes), bfe.duration)
 end
 
@@ -105,6 +104,8 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
     start_sets = Vector{Hyperrectangle}()
     push!(start_sets, init_set)
     while total_time < duration
+        print("\rCurrent time: ", total_time, " out of ", duration, "    ")
+        print()
         bfe_start_set = reposition(bfe, start_set)
         
         trans_region = get_transition_region(bfe_start_set)
