@@ -10,14 +10,14 @@ plotly()
 #pyplot()
 
 # Specifications #
-true_system, dtf = van_der_pol(μ=1.0)
-target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.4, 0.4])
+true_system, dtf = damped_harmonic_oscillator(ω=1.0, ζ=0.2)
+target_region = Hyperrectangle(low=[0.0, 0.0], high=[0.2, 0.2])
 duration = 2.2
 model_degrees = 5 * ones(Int, dimension(true_system))
 fp_deg = 5
 vp_deg = 5 # Volume polynomial degree
 deg_incr = 0
-Δt_max = 0.05
+Δt_max = 0.02
 ##################
 
 

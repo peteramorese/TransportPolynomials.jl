@@ -17,6 +17,30 @@ function van_der_pol(; μ::Float64=1.0, reverse::Bool=false)
 end
 
 """
+2D damped harmonic oscillator
+    ẋ₁ =  x₂
+    ẋ₂ = -ω^2 x₁ - 2ζω x₂
+For ζ > 0 and ω > 0, the origin is a globally asymptotically stable spiral (ζ ∈ (0,1): underdamped).
+"""
+function damped_harmonic_oscillator(; ω::Float64=1.0, ζ::Float64=0.2, reverse::Bool=false)
+    @assert ω > 0 "ω must be positive"
+    @assert ζ ≥ 0 "ζ (damping ratio) must be nonnegative"
+
+    sign = reverse ? -1.0 : 1.0
+    sys = SystemModel([
+        x -> sign * x[2],
+        x -> sign * (-ω^2 * x[1] - 2.0 * ζ * ω * x[2])
+    ])
+
+    dtf = DistributionTransform(SVector(
+        Normal(0.0, 0.4),
+        Normal(0.0, 0.4)
+    ))
+
+    return sys, dtf
+end
+
+"""
 3D Dubins car with fixed velocity and steering rate
 """
 function dubins_car(; v::Float64=1.0, steering_rate::Float64=0.1, reverse::Bool=false)

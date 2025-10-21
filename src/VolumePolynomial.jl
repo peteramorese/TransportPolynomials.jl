@@ -60,17 +60,26 @@ Compute the formal error bound for a taylor expansion using the geometric series
 Args:
     t : time to evaluate at
     degree : degree of the taylor expansion
-    next_coeff_upper_bound : upper bound of the (n+1) derivative over the region of interest
-    taylor_expansion_upper_bound : upper bound of the plain taylor expansion (without the bound poly term) over the duration
+    Vc : upper bound of the predictor expansion (without the bound poly term) over the duration
+    m_bar : upper bound of the (n+1) derivative over the region of interest
 """
-function geometric_error_bound(t::Float64, degree::Int, next_coeff_upper_bound::Float64, taylor_expansion_upper_bound::Float64)
-    println("taylor_expansion_upper_bound: ", taylor_expansion_upper_bound)
-    @assert next_coeff_upper_bound ≥ 0.0
+function geometric_error_bound(t::Float64, degree::Int, Vc::Float64, m_bar::Float64)
+    @assert m_bar ≥ 0.0
 
-    α = next_coeff_upper_bound * t^(degree + 1) / factorial(degree + 1)
-    if α ≥ 1.0
-        return 1.0
-    else
-        return taylor_expansion_upper_bound * (1.0 / (1.0 - α) - 1.0)
-    end
+    t_np1 = t^(degree + 1)
+    α = m_bar * t_np1 / factorial(degree + 1)
+    println("α: ", α)
+    println("DENOM: ", (1.0 - α))
+
+    return Vc / (1.0 - α)
+
+    #α = next_coeff_upper_bound * t^(degree + 1) / factorial(degree + 1)
+    #println("taylor_expansion_upper_bound: ", taylor_expansion_upper_bound, " nxt_coeff_ub: ", next_coeff_upper_bound, " α: ", α)
+    #println("returning: ", taylor_expansion_upper_bound / (1.0 - α))
+    #readline()
+    #if α ≥ 1.0
+    #    return 1.0
+    #else
+    #    return taylor_expansion_upper_bound / (1.0 - α)
+    #end
 end

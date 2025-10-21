@@ -126,7 +126,7 @@ function compute_bernstein_reach_sets(model::SystemModel{BernsteinPolynomial{T, 
         start_set = end_set
         total_time += trans_region.duration
     end
-
+    println()
     return Flowpipe(trans_sets, start_sets)
 end
 
