@@ -1,121 +1,113 @@
 
 # Generate synthetic data
-function generate_data(f, d, n; domain_std=1.0, noise_std=0.1, seed=0)
+function generate_data(true_system::SystemModel, n; domain_std=1.0, noise_std=0.1, seed=0)
     Random.seed!(seed)
-    X = randn(n, d) .* domain_std
-    Y_clean = zeros(n, d)
-    for i in 1:n
-        Y_clean[i, :] = f(X[i, :])
+    D = dimension(true_system)
+    X = randn(n, D) .* domain_std
+    fx_clean = zeros(n, D)
+    fx_clean = true_system(X)
+    #for i in 1:n
+    #    Y_clean[i, :] = true_system(X[i, :])
+    #end
+    noise = randn(n, D) .* noise_std
+    fx_hat = fx_clean + noise
+    return X, fx_hat
+end
+
+function x_data_to_u_data(X::Matrix{Float64}, fx_hat::Matrix{Float64}, dtf::DistributionTransform)
+    n, D = size(X)
+    @assert size(fx_hat, 1) == n
+    @assert size(X, 2) == size(fx_hat, 2)
+
+    U = x_to_u(dtf, X)
+    #print(size(diag(pdf.(dtf.dist, X))))
+    fu_hat = similar(fx_hat)
+    for i in 1:D
+        fu_hat[:, i] = pdf.(Ref(dtf.dist[i]), X[:, i]) .* fx_hat[:, i]
     end
-    noise = randn(n, d) .* noise_std
-    Y = Y_clean + noise
-    return X, Y
+    return U, fu_hat
 end
 
-# Gaussian CDF transform (erf-space)
-function erf_space_transform(x)
-    return cdf.(Normal(), x)
-end
+function constrained_poly_regression(constrained_dim::Int, U::Matrix{Float64}, f_hat_component::Vector{Float64}; degrees::Vector{Int}, λ::Float64=0.0)
+    n, D = size(U)
+    @assert length(f_hat_component) == n "Number of data in U and f_hat must match"
 
-# Jacobian of the erf-space transform
-function erf_space_transform_jacobian(x)
-    return Diagonal(pdf.(Normal(), x))
-end
+    shape = tuple((degrees .+ 1)...)
 
-function poly_regression(polyvars, X::Matrix{Float64}, y::Vector{Float64}; deg::Int=2)
-    n, d = size(X)
+    # We don't regress the i=0 or i=deg coefficients since they are constrained to be 0
+    free_coeffs_shape = degrees .+ 1
+    free_coeffs_shape[constrained_dim] -= 2
+    free_coeffs_shape = tuple(free_coeffs_shape...)
 
-    # Create symbolic variables x₁, x₂, ..., x_d
+    n_basis_functions = prod(free_coeffs_shape)
 
-    # Get all monomials up to total degree `deg`
-    mons = monomials(polyvars, 0:deg)
+    A = zeros(n, n_basis_functions)
 
-    # Build the design matrix A (n × num_monomials)
-    A = zeros(n, length(mons))
-    for i in 1:n
-        xi = X[i, :]
-        subst = Dict(polyvars[j] => xi[j] for j in 1:d)
-        A[i, :] = [subs(m, subst...) for m in mons]
+    log_U = log.(U)
+    log_1mU = log.(1 .- U)
+
+    log_safe = true
+    if any(isinf.(log_U)) | any(isinf.(log_1mU))
+        @warn("Log-infinite values encountered; regressing using direct calculations")
+        log_safe = false
     end
 
-    # Solve least squares to find coefficients
-    coeffs = A \ y
+    i = 1
+    for I in CartesianIndices(free_coeffs_shape)
+        log_basis = zeros(n)
+        for j in 1:D
+            if j != constrained_dim
+                idx = I[j] - 1
+            else
+                idx = I[j] + 1
+            end
+            deg = degrees[j]
 
-    # Form the polynomial from monomials and fitted coefficients
-    p = coeffs' * mons
-
-    return p
-end
-
-function system_regression(X_u, Y_u, degree)
-    @assert size(X_u) == size(Y_u)
-
-    d = size(X_u, 2)
-    @polyvar x[1:d]
-
-    model = Vector{Polynomial}()
-    
-    bc_scaling = 1 ./(X_u .* (1 .- X_u))
-    Y_u_unconst = Y_u .* bc_scaling
-
-    for i in 1:n
-        y = Y_u_unconst[:, i]
-        p = poly_regression(x, X_u, y, deg=degree) 
-        p_bc = x[i] * (1 - x[i]) * p 
-        push!(model, p_bc)
+            log_binom = lgamma(deg + 1) - lgamma(idx + 1) - lgamma(deg - idx + 1)
+            if log_safe
+                log_basis += log_binom .+ idx * log_U[:, j] .+ (deg - idx) * log_1mU[:, j]
+            else
+                x_1mx_prod = (U[:, j] .^ idx) .* (1.0 .- U[:, j]) .^ (deg - idx)
+                log_basis += log_binom .+ log.(x_1mx_prod)
+            end
+        end
+        A[:, i] = exp.(log_basis)
+        i += 1
     end
-    return model
+        
+    # Least squares
+    ATA = A' * A
+    ATf = A' * f_hat_component
+    if λ > 0
+        ATA += λ * I
+    end
+    free_coeffs = ATA \ ATf
+    #free_coeffs = A \ f_hat_component
+    free_coeffs = reshape(free_coeffs, free_coeffs_shape)
+
+    #println("max coeff mag: ", maximum(abs.(free_coeffs)))
+
+    indices = [j == constrained_dim ? (2:degrees[j]) : Colon() for j in 1:D]
+
+    coeffs = zeros(Float64, shape...)
+    coeffs[indices...] = free_coeffs
+    return BernsteinPolynomial{Float64, D}(coeffs)
 end
 
+function constrained_system_regression(U::Matrix{Float64}, f_hat::Matrix{Float64}, degrees::Vector{Int}; reverse::Bool=false, λ::Float64=0.0)
+    n, D = size(U)
+    @assert size(f_hat, 1) == n "Number of data in U and f_hat must match"
+    @assert size(f_hat, 2) == D "Dimension of f_hat must match dimension of U"
+    @assert length(degrees) == D "Length of degrees must match dimension of U"
 
-# Example usage
-d = 2
-n = 1000
-degree = 3
+    if reverse
+        f_hat *= -1.0
+    end
 
-example_function(x) = sin.(4 * x) .* 1 ./ (1 .+ (.5*x).^2)
-X, Y = generate_data(example_function, d, n, noise_std=0.01)
-
-#visualize_data(X, Y)
-
-# Transform to unit box
-X_u = erf_space_transform.(X)
-Y_u = zeros(size(Y))
-for i in 1:size(X, 1)
-    J = erf_space_transform_jacobian(X[i, :])
-    Y_u[i, :] = J * Y[i, :]
+    f_polys = Vector{BernsteinPolynomial{Float64, D}}(undef, D)
+    for i in 1:D
+        f_polys[i] = constrained_poly_regression(i, U, f_hat[:, i], degrees=degrees, λ=λ)
+    end
+    return SystemModel(f_polys)
 end
 
-#visualize_data(X_u, Y_u, "Erf space transformed data")
-
-# Fit constrained model
-#models = fit_constrained_polynomial(X_u, Y_u, degree)
-
-
-
-
-
-
-
-
-
-
-
-
-#@polyvar x[1:2]
-#
-#X = randn(n, 2)
-#y = .4 * X[:,1].^3 + 2 * X[:,2].^2 .+ 5 .+ 0.1 * randn(n)
-#
-## Perform polynomial regression
-#p = poly_regression(x[1:2], X, y, deg=3)
-#
-#p_true = .4 * x[1]^3 + 2 * x[2]^2 .+ 5
-#
-#println("Fitted polynomial:")
-#println(p)
-#
-#p1 = scatter(X[:, 1], X[:, 2], y, markersize=4, title="f1(x1, x2)", xlabel="x1", ylabel="x2", zlabel="f1")
-#p2 = plot_polynomial_surface(p, x[1], x[2], (-3, 3), (-3, 3), title="Polynomial Surface")
-#p3 = plot_polynomial_surface(p_true, x[1], x[2], (-3, 3), (-3, 3), title="True Polynomial Surface")
-#display(plot(p1, p2, p3, layout=(1, 3), size=(800, 400)))

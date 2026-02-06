@@ -8,85 +8,81 @@ using Plots
 using LazySets
 pyplot()
 
-@polyvar x[1:2]
-@polyvar t
+#f1 = (x[1] * (x[1] - 1)) * (-x[1]^2 + 3.0 * x[1]*x[2]^2)
+#f2 = (x[2] * (x[2] - 1)) * (x[1] - 4 * x[2]^2 * x[1])
+f1_coeffs = [0.0 0.0 0.0;
+            0.0 0.1 0.0;
+            0.0 0.0 0.0;]
+f2_coeffs = [0.0 0.0 0.0;
+            0.0 0.1 0.0;
+            0.0 0.0 0.0;]
 
-f1 = (x[1] * (x[1] - 1)) * (-x[1]^2 + 3.0 * x[1]*x[2]^2)
-f2 = (x[2] * (x[2] - 1)) * (x[1] - 4 * x[2]^2 * x[1])
+#f1_coeffs = 0.001*[0.0 3.0 -3.0 0.0; 
+#             2.0 -4.0 0.0 0.0; 
+#             0.0 2.0 0.0 1.0; 
+#             0.0 0.0 -2.0 0.0]
+#f2_coeffs = 0.001*[0.0 3.0 -3.0 0.0; 
+#             2.0 -4.0 0.0 0.0; 
+#             0.0 2.0 0.0 1.0; 
+#             0.0 0.0 -2.0 0.0]
+f1 = BernsteinPolynomial{Float64, 2}(f1_coeffs)
+f2 = BernsteinPolynomial{Float64, 2}(f2_coeffs)
+model = SystemModel([f1, f2])
 
-model = SystemModel(x, [f1, f2])
+#@polyvar x[1:2]
+#mvp_model = to_mv_polynomial_system(model, x)
 
-println("f1: ", f1)
-println("f2: ", f2)
+vp_deg = 3
 
-order = 3
+erf_space_region = Hyperrectangle(low=[0.3, .2], high=[0.4, 0.3])
 
-erf_space_region = Hyperrectangle(low=[0.3, .2], high=[0.6, 0.5])
-
-vol_poly, nxt_coeff = create_vol_poly_and_nxt_coeff(model, t, order)
-
-println("Created volume polynomial")
-
-bound_poly = create_basic_sos_bound_poly(nxt_coeff, t, order, lagrangian_degree_inc=2, bound_type=Upper)
-
-println("Created bound polynomial")
-
-integ_poly = create_integrator_poly(vol_poly)
-
-println("Created integrator polynomial")
-
-duration = 1.8
-
-ts = create_box_taylor_spline(model, t, order, erf_space_region, duration, n_segments=30)
-ts_cont = create_continuous_taylor_spline(model, t, order, erf_space_region, duration, n_segments=30)
-
-#print("Taylor spline: ")
-#function print_ts()
-#    total_time = 0.0
-#    for spline in ts.segments
-#        end_time = total_time + spline.duration
-#        print(spline.volume_function, " [$total_time, $(end_time)], ")
-#        total_time = end_time
-#    end
-#    println("")
-#end
-#print_ts()
-
-## Plot the probability prediction over time
-println("Computing volume polynomial...")
-plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, n_points=50, geometric=false)
-#plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, bound_poly, duration, plt=plt_vp_prob, n_points=50, geometric=true)
-#plt_vp_prob = plot_integ_poly_prob_vs_time(erf_space_region, integ_poly, duration, n_points=50)
-
-#println("Computing monte carlo...")
-#plt_vp_prob = plot_euler_mc_prob_vs_time(plt_vp_prob, erf_space_region, model, duration, n_points=30, n_samples=300)
+duration = 10.5
+#duration = 5.5
 
 
-println("Computing taylor spline...")
+flow_pipe = compute_taylor_reach_sets(model; init_set=erf_space_region, duration=duration)
+#flow_pipe = compute_taylor_reach_sets(mvp_model; init_set=erf_space_region, duration=duration)
 
-#ts(0.0)
 
-t_pts = range(0.0, duration, 100)
-ts_pts = [ts(t) for t in t_pts]
-ts_cont_pts = [ts_cont(t) for t in t_pts]
-plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
-plot!(plt_vp_prob, t_pts, ts_cont_pts, label="Continuous Taylor Spline")
-#fig2 = plot(t_pts, ts_pts, label="Taylor Spline")
+ts = create_box_taylor_spline(flow_pipe, model, vp_deg)
+tamed_ts = create_tamed_taylor_spline(flow_pipe, model, vp_deg)
 
+function get_seg_t(n)
+    t_seg = 0.0
+    for i in 1:n
+        t_seg += ts.segments[i].duration
+    end
+    return t_seg
+end
+
+t_seg = get_seg_t(1)
+println("t seg: ", t_seg)
+t_b4 = t_seg - 0.001
+t_af = t_seg + 0.001
+println("tamed ts b4: ", tamed_ts(t_b4))
+println("tamed ts af: ", tamed_ts(t_af))
+
+# Plot the flowpipe
+plt_fp = plot(flow_pipe, vars=(1,2))
+xlims!(plt_fp, 0.0, 1.0)
+ylims!(plt_fp, 0.0, 1.0)
+
+# Plot the bounding boxes of each segment
 plt_boxes = plot()
 xlims!(plt_boxes, 0.0, 1.0)
 ylims!(plt_boxes, 0.0, 1.0)
-for segment in ts_cont.segments
+for segment in tamed_ts.segments
     plot_2D_region(plt_boxes, segment.Ω_bounding_box)
 end
 
+# Plot the probability functions
+n_pts = 1000
+plt_vp_prob = plot()
+t_pts = range(0.0, duration, n_pts)
+ts_pts = [ts(t) for t in t_pts]
+tamed_ts_pts = [tamed_ts(t) for t in t_pts]
+plot!(plt_vp_prob, t_pts, ts_pts, label="Box Taylor Spline")
+plot!(plt_vp_prob, t_pts, tamed_ts_pts, label="Tamed Taylor Spline")
 
 
-
-fig1 = plot(plt_vp_prob, title="Probability vs. time for region")
-
-
-
-display(fig1)
-display(plt_boxes)
-#display(fig2)
+plot(plt_fp, plt_boxes, plt_vp_prob, layout=(1,3), size=(1200, 400))
