@@ -3,8 +3,10 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    working_dir: /root
+    working_dir: /app
     volumes:
-      - ./figures_container:/root/TransportPolynomials/figures
-      #- .:/root/TransportPolynomials
+      - ./src/:/app/src/
+      - ./scripts/:/app/scripts/
+      - ./test/:/app/test/
+      - ./figures_container/:/app/figures_container/
     command: tail -f /dev/null  # Temporary command to keep the container running
