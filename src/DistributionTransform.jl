@@ -85,7 +85,7 @@ function to_u_space_model(dtf::DistributionTransform{DIST, D}, x_model::SystemMo
     for i in 1:dimension(x_model)
         x_f = x_model.f[i]
         u_f = function(u::AbstractVector{T}) where {T}
-            return pdf(dtf.dist[i], quantile(dtf.dist[i], u[:, i])) .* x_f(u_to_x(dtf, u))
+            return pdf(dtf.dist[i], quantile(dtf.dist[i], u[i])) .* x_f(u_to_x(dtf, u))
         end
         u_model_f[i] = u_f
     end

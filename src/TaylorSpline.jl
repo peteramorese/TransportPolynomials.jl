@@ -92,22 +92,23 @@ function create_tamed_taylor_spline(flow_pipe::Flowpipe, model::SystemModel, vol
         # (upper bound) prediction of Ω volume using the previous volume function and the end of its duration
         if k > 1
             pred_Ω_volume = prev_vf(segments[end].duration)
-            pred_volume_diff = clamp(volume(R) - pred_Ω_volume, 0.0, 1.0)
+            #pred_volume_diff = clamp(volume(R) - pred_Ω_volume, 0.0, 1.0)
+            predictors = [prev_vf]
+            pred_roc = [pred_Ω_volume]
+            for _ in 1:vol_poly_degree 
+                push!(predictors, differentiate(predictors[end]))
+                push!(pred_roc, predictors[end](segment_duration)) # TODO use prev segment duration
+            end
+            adjusted_roc = [integrate(pos_part(coeff), R) for coeff in vol_poly.spatio_coeffs]
         else
-            pred_Ω_volume = Inf
-            pred_volume_diff = 0.0
+            adjusted_roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
+            pred_roc = Inf * ones(vol_poly_degree + 1)
         end
         # Worst case difference between integral of coefficients over R vs Ω_pred
-        worst_case_roc_diff = pred_volume_diff * roc_infemums
+        #worst_case_roc_diff = pred_volume_diff * roc_infemums
 
-        adjusted_roc = roc .- worst_case_roc_diff
+        #adjusted_roc = roc .- worst_case_roc_diff
 
-        predictors = [prev_vf]
-        pred_roc = [pred_Ω_volume]
-        for _ in 1:vol_poly_degree 
-            push!(predictors, differentiate(predictors[end]))
-            push!(pred_roc, predictors[end](segment_duration)) # TODO use prev segment duration
-        end
 
         # Compute the current volume function coefficients at the end of time time span
 
@@ -161,7 +162,7 @@ function create_geometric_taylor_spline(flow_pipe::Flowpipe, model::SystemModel,
             #println("geo error bound: ", geometric_error_bound(segments[end].duration, prev_geo_params...))
             pred_Ω_volume = prev_vf(segments[end].duration)
             #pred_Ω_volume = prev_expansion(segments[end].duration) + geometric_error_bound(segments[end].duration, prev_geo_params...)
-            pred_volume_diff = clamp(volume(R) - pred_Ω_volume, 0.0, 1.0)
+            #pred_volume_diff = clamp(volume(R) - pred_Ω_volume, 0.0, 1.0)
             predictors = [prev_vf]
             pred_roc = [pred_Ω_volume]
             for i in 1:vol_poly_degree 
@@ -169,17 +170,21 @@ function create_geometric_taylor_spline(flow_pipe::Flowpipe, model::SystemModel,
                 push!(pred_roc, predictors[end](segment_duration)) # TODO use prev segment duration
             end
             Vc_offset = pred_Ω_volume
+
+            adjusted_roc = [integrate(pos_part(coeff), R) for coeff in vol_poly.spatio_coeffs]
         else
-            pred_Ω_volume = Inf
-            pred_volume_diff = 0.0
+            adjusted_roc = [integrate(coeff, R) for coeff in vol_poly.spatio_coeffs]
+            #pred_Ω_volume = Inf
+            #pred_volume_diff = 0.0
             pred_roc = Inf * ones(vol_poly_degree + 1)
-            Vc_offset = 0.0
+            #Vc_offset = 0.0
         end
 
         # Worst case difference between integral of coefficients over R vs Ω_pred
-        worst_case_roc_diff = pred_volume_diff * roc_infemums
+        #worst_case_roc_diff = pred_volume_diff * roc_infemums
 
-        adjusted_roc = roc .- worst_case_roc_diff
+        #adjusted_roc = roc .- worst_case_roc_diff
+        #adjusted_roc = [integrate(pos_part(coeff), R) for coeff in vol_poly.spatio_coeffs]
 
         # Compute the current volume function coefficients at the end of time time span
 
@@ -197,13 +202,17 @@ function create_geometric_taylor_spline(flow_pipe::Flowpipe, model::SystemModel,
         
         # Create geo params: vol poly degree (unchanged), upper bound of nxt coeff over trans set, and upper bound of the unbounded expansion
         Vc = upper_bound(bernstein_tamed_ex)
-        println(" upper bound term: ", upper_bound(bernstein_tamed_ex))
+        #println(" upper bound term: ", upper_bound(bernstein_tamed_ex))
         m_bar = upper_bound(nxt_coeff, trans_set.set)
         geo_params = (vol_poly_degree, Vc, m_bar)
-        println("Vc: ", Vc, " m_bar: ", m_bar)
+        #println("Vc: ", Vc, " m_bar: ", m_bar)
 
-        Pinf = geometric_error_bound(segment_duration, geo_params...)
-        println("Pinf: ", Pinf, " P0: ", volume(trans_set.set), " pred Omega vol: ", pred_Ω_volume)
+        if m_bar > 0.0
+            Pinf = geometric_error_bound(segment_duration, geo_params...)
+        else
+            Pinf = volume(trans_set.set)
+        end
+        #println("Pinf: ", Pinf, " P0: ", volume(trans_set.set), " pred Omega vol: ", pred_Ω_volume)
         bound_poly_coeffs = zeros(Float64, vol_poly_degree + 2) # Add one since the bound poly is degree + 1
         bound_poly_coeffs[end] = Pinf * m_bar / factorial(vol_poly_degree + 1)
         #bound_poly_coeffs[end] = volume(trans_set.set) * m_bar / factorial(vol_poly_degree + 1)

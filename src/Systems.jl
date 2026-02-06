@@ -1,4 +1,47 @@
 """
+1D linear system
+    ẋ = a x
+Default: stable system with eigenvalue having negative real part.
+"""
+function linear_system_1D(; a::Float64 = -0.5,
+                        reverse::Bool = false)
+    sign = reverse ? -1.0 : 1.0
+
+    sys = SystemModel{Function}([
+        x -> sign * a * x[1],
+    ])
+
+    dtf = DistributionTransform(SVector(
+        Normal(0.0, 0.5),
+    ))
+
+    return sys, dtf
+end
+"""
+2D linear system
+    ẋ = A x
+Default: stable system with eigenvalues having negative real parts.
+"""
+function linear_system_2D(; A::Matrix{Float64} = [-0.5  1.0;
+                                               -1.0 -0.5],
+                        reverse::Bool = false)
+    @assert size(A) == (2, 2) "A must be 2x2"
+    sign = reverse ? -1.0 : 1.0
+
+    sys = SystemModel([
+        x -> sign * (A[1,1]*x[1] + A[1,2]*x[2]),
+        x -> sign * (A[2,1]*x[1] + A[2,2]*x[2])
+    ])
+
+    dtf = DistributionTransform(SVector(
+        Normal(0.0, 0.4),
+        Normal(0.0, 0.4)
+    ))
+
+    return sys, dtf
+end
+
+"""
 2D Van Der Pol oscillator
 """
 function van_der_pol(; μ::Float64=1.0, reverse::Bool=false)

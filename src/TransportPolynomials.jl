@@ -47,7 +47,7 @@ export BernsteinPolynomial, deg, dimension, decasteljau, log_eval, differentiate
 export create_bernstein_expansion, create_bernstein_field_expansion, compute_bernstein_reach_sets, reposition, get_final_region
 
 # Visualization
-export plot_2D_region!, plot_taylor_spline!, plot_flowpipe!
+export plot_2D_region!, plot_taylor_spline!, plot_flowpipe!, plot_vector_field!
 
 # DistributionTransform
 export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_state_space_model, to_u_space_model
@@ -56,7 +56,7 @@ export DistributionTransform, dimension, x_to_u, u_to_x, Rx_to_Ru, Ru_to_Rx, to_
 export generate_data, x_data_to_u_data, constrained_poly_regression, constrained_system_regression
 
 # Systems
-export van_der_pol, damped_harmonic_oscillator, cartpole, dubins_car
+export van_der_pol, damped_harmonic_oscillator, cartpole, dubins_car, linear_system_1D, linear_system_2D
 
 # Euler
 export euler_density, euler_probability, euler_probability_traj

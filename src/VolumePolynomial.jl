@@ -68,8 +68,8 @@ function geometric_error_bound(t::Float64, degree::Int, Vc::Float64, m_bar::Floa
 
     t_np1 = t^(degree + 1)
     α = m_bar * t_np1 / factorial(degree + 1)
-    println("α: ", α)
-    println("DENOM: ", (1.0 - α))
+    #println("α: ", α)
+    #println("DENOM: ", (1.0 - α))
 
     return Vc / (1.0 - α)
 

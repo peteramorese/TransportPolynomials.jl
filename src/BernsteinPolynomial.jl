@@ -359,6 +359,14 @@ function to_mv_polynomial(p::BernsteinPolynomial{T, D}, x_vars::Vector) where {T
     return poly
 end
 
+function pos_part(p::BernsteinPolynomial{T, D}) where {T, D}
+    return BernsteinPolynomial{T, D}(max.(p.coeffs, 0.0))
+end
+
+function neg_part(p::BernsteinPolynomial{T, D}) where {T, D}
+    return BernsteinPolynomial{T, D}(min.(p.coeffs, 0.0))
+end
+
 ##### --- helpers --- #####
 
 function _elevate_along_dim(coeffs::Array{T,D}, n::Int, m::Int, dim::Int) where {T,D}
