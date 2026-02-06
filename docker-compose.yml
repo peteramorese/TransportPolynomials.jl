@@ -1,7 +1,8 @@
 services:
   ws:
-    build: .
-    image: transportpolynomials:latest
+    build:
+      context: ./
+      dockerfile: Dockerfile
     working_dir: /root
     volumes:
       - ./figures_container:/root/TransportPolynomials/figures
