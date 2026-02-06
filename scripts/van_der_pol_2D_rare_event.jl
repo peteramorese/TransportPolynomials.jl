@@ -69,18 +69,12 @@ euler_prob_traj_log = [log(max(p, 1e-10)) for p in euler_prob_traj]
 euler_prob_traj_log_true = [log(max(p, 1e-10)) for p in euler_prob_traj_true]
 
 
-println("tamed ts pts: ", tamed_ts_pts)
-
 plt_prob = plot(legend=false, tickfontsize=12)  
 plt_prob = plot!(plt_prob, t_pts, log_box_ts_pts, label="Box", color=:blue)
 plt_prob = plot!(plt_prob, t_pts, log_tamed_ts_pts, label="Bound 1", color=:coral)
 plt_prob = plot!(plt_prob, t_pts, log_geo_ts_pts, label="Bound 2 (geometric)", color=:green)
 plt_prob = plot!(plt_prob, timestamps, euler_prob_traj_log, label="MC (learned)", color=:red)
 plt_prob = plot!(plt_prob, timestamps_true, euler_prob_traj_log_true, label="MC (ground truth)", color=:purple)
-
-## Concentration bounds
-#plt_prob = plot!(plt_prob, timestamps, euler_prob_upper_log, linestyle=:dot, color=:red, label=nothing)
-#plt_prob = plot!(plt_prob, timestamps_true, euler_prob_upper_log_true, linestyle=:dot, color=:purple, label=nothing)
 
 xlabel!(plt_prob, "τ", fontsize=12)
 xlims!(plt_prob, 0.0, duration)
@@ -94,7 +88,7 @@ if save_plots
     mkpath(figures_dir)  # Create directory if it doesn't exist
     
     # Save flowpipe plot as PNG
-    savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_rare_event_flowpipe.pdf"))
+    #savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_rare_event_flowpipe.pdf"))
     savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_rare_event_flowpipe.png"))
     
     # Save probability plot as PDF

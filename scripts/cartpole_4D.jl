@@ -79,8 +79,6 @@ plt_prob = plot_taylor_spline!(plt_prob, geo_ts, duration, label="Bound 2 (geome
 plt_prob = plot(plt_prob, timestamps, euler_prob_traj, label="MC (learned)", color=:red)
 plt_prob = plot!(plt_prob, timestamps_true, euler_prob_traj_true, label="MC (ground truth)", color=:purple)
 
-## Concentration bounds
-#plt_prob = plot!(plt_prob, timestamps, euler_prob_upper, linestyle=:dot, color=:red, label=nothing)
 
 xlabel!(plt_prob, "τ", fontsize=12)
 xlims!(plt_prob, 0.0, duration)
@@ -94,7 +92,7 @@ if save_plots
     mkpath(figures_dir)  # Create directory if it doesn't exist
     
     # Save flowpipe plot as PNG
-    savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_flowpipe.pdf"))
+    #savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_flowpipe.pdf"))
     savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_flowpipe.png"))
     
     # Save probability plot as PDF

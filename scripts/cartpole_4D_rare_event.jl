@@ -93,10 +93,6 @@ plt_prob = plot!(plt_prob, t_pts, log_geo_ts_pts, label="Bound 2 (geometric)", c
 plt_prob = plot!(plt_prob, timestamps, euler_prob_traj_log, label="MC (learned)", color=:red)
 plt_prob = plot!(plt_prob, timestamps_true, euler_prob_traj_log_true, label="MC (ground truth)", color=:purple)
 
-## Concentration bounds
-#plt_prob = plot!(plt_prob, timestamps, euler_prob_upper_log, linestyle=:dot, color=:red, label=nothing)
-#plt_prob = plot!(plt_prob, timestamps_true, euler_prob_upper_log_true, linestyle=:dot, color=:purple, label=nothing)
-
 xlabel!(plt_prob, "τ", fontsize=12)
 xlims!(plt_prob, 0.0, duration)
 ylims!(plt_prob, -10.0, 0.0)
@@ -109,7 +105,7 @@ if save_plots
     mkpath(figures_dir)  # Create directory if it doesn't exist
     
     # Save flowpipe plot as PNG
-    savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_rare_event_flowpipe.pdf"))
+    #savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_rare_event_flowpipe.pdf"))
     savefig(plt_fp, joinpath(figures_dir, "cartpole_4D_rare_event_flowpipe.png"))
     
     # Save probability plot as PDF

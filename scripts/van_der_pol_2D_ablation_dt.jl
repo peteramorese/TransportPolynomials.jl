@@ -57,20 +57,10 @@ for Δt_max in Δt_max_range
     push!(geo_ts_list, geo_ts)
 end
 
-## Plot the flowpipe
-#plt_fp = plot(aspect_ratio = :equal)
-#plt_fp = plot_flowpipe!(plt_fp, flow_pipe; color=:teal, alpha=0.0, n=10)
-#plt_fp = plot_2D_region!(plt_fp, target_region_u; color=:red)
-
 # Plot the probability functions
 plt_prob = plot(legend=:topleft, tickfontsize=12, legendfontsize=12)  
 
-# Plot MC learned and ground truth first
-#plt_prob = plot(plt_prob, timestamps, euler_prob_traj, label="MC (learned)", color=:orange, linewidth=2)
-#plt_prob = plot(plt_prob, timestamps_true, euler_prob_traj_true, label="MC (ground truth)", color=:purple, linewidth=2)
 
-# Assign distinct colors to each Δt_max
-# Using distinguishable colors: blue, red, green, orange, purple, brown, pink, gray
 colors_by_dt_max = Dict(
     0.01 => :blue,
     0.05 => :red,
@@ -96,24 +86,14 @@ for (Δt_max, geo_ts) in zip(Δt_max_range, geo_ts_list)
     plt_prob = plot_taylor_spline!(plt_prob, geo_ts, duration, label="Bound 2 (Δt_max=$Δt_max)", color=color, linestyle=:dash)
 end
 
-## Concentration bounds
-#plt_prob = plot!(plt_prob, timestamps, euler_prob_upper, linestyle=:dot, color=:red, label=nothing)
-#plt_prob = plot!(plt_prob, timestamps_true, euler_prob_upper_true, linestyle=:dot, color=:purple, label=nothing)
-
 xlabel!(plt_prob, "τ", fontsize=12)
 xlims!(plt_prob, 0.0, duration)
 ylims!(plt_prob, 0.0, 1.0)
-
-#plot(plt_fp, plt_prob, layout=(1,3), size=(1200, 400))
 
 # Save plots if flag is set
 if save_plots
     figures_dir = joinpath(@__DIR__, "..", "figures")
     mkpath(figures_dir)  # Create directory if it doesn't exist
-    
-    ## Save flowpipe plot as PNG
-    #savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_flowpipe.pdf"))
-    #savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_flowpipe.png"))
     
     # Save probability plot as PDF
     savefig(plt_prob, joinpath(figures_dir, "van_der_pol_2D_ablation_dt_probability.pdf"))

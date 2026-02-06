@@ -63,10 +63,6 @@ plt_prob = plot(plt_prob, timestamps, euler_prob_traj, label="MC (learned)", col
 
 plt_prob = plot(plt_prob, timestamps_true, euler_prob_traj_true, label="MC (ground truth)", color=:purple)
 
-## Concentration bounds
-#plt_prob = plot!(plt_prob, timestamps, euler_prob_upper, linestyle=:dot, color=:red, label=nothing)
-#plt_prob = plot!(plt_prob, timestamps_true, euler_prob_upper_true, linestyle=:dot, color=:purple, label=nothing)
-
 xlabel!(plt_prob, "τ", fontsize=12)
 xlims!(plt_prob, 0.0, duration)
 ylims!(plt_prob, 0.0, 1.0)
@@ -79,7 +75,7 @@ if save_plots
     mkpath(figures_dir)  # Create directory if it doesn't exist
     
     # Save flowpipe plot as PNG
-    savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_flowpipe.pdf"))
+    #savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_flowpipe.pdf"))
     savefig(plt_fp, joinpath(figures_dir, "van_der_pol_2D_flowpipe.png"))
     
     # Save probability plot as PDF

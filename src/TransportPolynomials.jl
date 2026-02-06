@@ -11,9 +11,6 @@ using Random
 using DynamicPolynomials
 using MultivariatePolynomials
 using SumOfSquares
-using JuMP
-using MosekTools
-using ModelingToolkit
 using IntervalArithmetic
 using SpecialFunctions
 using FFTW
@@ -28,7 +25,6 @@ include("DistributionTransform.jl")
 include("SystemRegression.jl")
 include("Systems.jl")
 include("Euler.jl")
-#include("PolynomialBounds.jl")
 include("VolumePolynomial.jl")
 #include("BoundedVolumePolynomial.jl")
 include("Probability.jl")
@@ -67,9 +63,9 @@ export compute_coefficients, create_vol_poly, create_vol_poly_and_nxt_coeff
 # Probability
 export density, probability, propagate_sample, euler_density, mc_euler_probability
 
-# PolynomialBounds
-export BoundType, Upper, Lower, Magnitude
-export sos_bound, dsos_bound, intarith_bound, coeff_sos_bound, coeff_intarith_bound
+## PolynomialBounds
+#export BoundType, Upper, Lower, Magnitude
+#export sos_bound, dsos_bound, intarith_bound, coeff_sos_bound, coeff_intarith_bound
 
 # PicardIteration
 export picard_operator, picard_vol_poly

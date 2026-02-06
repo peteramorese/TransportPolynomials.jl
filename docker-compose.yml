@@ -1,18 +1,9 @@
 services:
-  julia:
+  ws:
     build: .
     image: transportpolynomials:latest
-    working_dir: /app
-    # Persist compiled packages across runs (optional but speeds up subsequent starts)
+    working_dir: /root
     volumes:
-      - julia_depot:/root/.julia
-      - ./src:/app/src
-      - ./scripts:/app/scripts
-      - ./test:/app/test
-    # Override to run a script, e.g.: docker compose run julia scripts/cartpole_4D.jl
-    command: ["--help"]
-    stdin_open: true
-    tty: true
-
-volumes:
-  julia_depot:
+      - ./figures_container:/root/TransportPolynomials/figures
+      #- .:/root/TransportPolynomials
+    command: tail -f /dev/null  # Temporary command to keep the container running
