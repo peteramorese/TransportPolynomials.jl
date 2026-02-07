@@ -20,7 +20,6 @@ deg_incr = 0
 Δt_max = 0.1#0.01
 λ = 10.0
 save_plots = true
-# CHANGE MC SAMPLES BACK TO 10000
 ##################
 
 
